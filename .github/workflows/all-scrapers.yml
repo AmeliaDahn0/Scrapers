@@ -134,6 +134,7 @@ jobs:
           MATH_ACADEMY_PASSWORD: ${{ secrets.MATH_ACADEMY_PASSWORD }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
           PLAYWRIGHT_BROWSERS_PATH: /home/runner/.cache/ms-playwright
           PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS: true
           CI: true
