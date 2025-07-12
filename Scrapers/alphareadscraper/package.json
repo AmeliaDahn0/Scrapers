@@ -1,0 +1,38 @@
+{
+  "name": "alphareadscraper",
+  "version": "1.0.0",
+  "description": "A Playwright scraper for Alpha Read website",
+  "main": "scraper.js",
+  "scripts": {
+    "install-browsers": "playwright install",
+    "scrape": "node scraper.js",
+    "scrape-students": "node multi-email-scraper.js",
+    "debug-table": "node debug-student-table.js",
+    "debug-search": "node debug-search.js",
+    "debug-available": "node debug-available-students.js",
+    "upload-existing": "node upload-existing-data.js",
+    "test": "node scraper.js",
+    "test-parsing": "node test-parsing-fix.js test",
+    "analyze-data": "node test-parsing-fix.js analyze",
+    "test-login": "node login-test.js",
+    "test-navigation": "node navigation-test.js",
+    "test-students-db": "node test-students-database.js",
+    "verify-service-role": "node verify-service-role.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.50.3",
+    "dotenv": "^16.3.1",
+    "playwright": "^1.40.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0"
+  },
+  "keywords": [
+    "playwright",
+    "scraper",
+    "web-scraping",
+    "alpharead"
+  ],
+  "author": "",
+  "license": "MIT"
+}

@@ -1,0 +1,241 @@
+name: All Scrapers Unified
+
+on:
+  schedule:
+    - cron: '0 * * * *'  # Every hour
+  workflow_dispatch:
+
+jobs:
+  membean:
+    name: Membean Scraper
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+          fetch-depth: 0
+          clean: true
+      - name: Debug - List repository structure
+        run: |
+          echo "=== Repository root ==="
+          ls -la
+          echo "=== Scrapers directory ==="
+          ls -la Scrapers/ || echo "Scrapers directory not found"
+          echo "=== Membean scraper directory ==="
+          ls -la Scrapers/membeanscraper/ || echo "Membean directory not found"
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: |
+          cd Scrapers/membeanscraper
+          pwd
+          ls -la
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            xvfb \
+            libnss3 \
+            libnspr4 \
+            libatk-bridge2.0-0 \
+            libdrm2 \
+            libxkbcommon0 \
+            libgtk-3-0 \
+            libgbm1 \
+            libasound2 \
+            libxrandr2 \
+            libxcomposite1 \
+            libxdamage1 \
+            libxss1 \
+            libatspi2.0-0
+      - name: Install Playwright Chromium only
+        env:
+          PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS: true
+          PLAYWRIGHT_BROWSERS_PATH: /home/runner/.cache/ms-playwright
+          CI: true
+        run: |
+          cd Scrapers/membeanscraper
+          timeout 300 playwright install chromium --with-deps || echo "Playwright install completed or timed out"
+      - name: Run scraper
+        env:
+          MEMBEAN_USERNAME: ${{ secrets.MEMBEAN_USERNAME }}
+          MEMBEAN_PASSWORD: ${{ secrets.MEMBEAN_PASSWORD }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          CI: true
+          PLAYWRIGHT_BROWSERS_PATH: /home/runner/.cache/ms-playwright
+          PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS: true
+        run: |
+          cd Scrapers/membeanscraper
+          python membean_scraper.py
+      - name: Commit and push data
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add Scrapers/membeanscraper/data/ || echo "No data directory to add"
+          git diff --staged --quiet || git commit -m "Automated data update - $(date)"
+          git pull --rebase origin main
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Upload debug artifacts (if any)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: membean-debug-screenshots
+          path: Scrapers/membeanscraper/debug_*.png
+          retention-days: 7
+          if-no-files-found: ignore
+
+  mathacademy:
+    name: Math Academy Scraper
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          clean: true
+      - name: Debug - List repository structure
+        run: |
+          echo "=== Repository root ==="
+          ls -la
+          echo "=== Scrapers directory ==="
+          ls -la Scrapers/ || echo "Scrapers directory not found"
+          echo "=== Math Academy scraper directory ==="
+          ls -la Scrapers/mathacademyscraper/ || echo "Math Academy directory not found"
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: |
+          cd Scrapers/mathacademyscraper
+          pwd
+          ls -la
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Install Playwright browsers
+        env:
+          PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS: true
+          PLAYWRIGHT_BROWSERS_PATH: /home/runner/.cache/ms-playwright
+          CI: true
+        run: |
+          cd Scrapers/mathacademyscraper
+          timeout 300 playwright install chromium --with-deps || echo "Playwright install completed or timed out"
+      - name: Run scraper
+        env:
+          MATH_ACADEMY_USERNAME: ${{ secrets.MATH_ACADEMY_USERNAME }}
+          MATH_ACADEMY_PASSWORD: ${{ secrets.MATH_ACADEMY_PASSWORD }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          PLAYWRIGHT_BROWSERS_PATH: /home/runner/.cache/ms-playwright
+          PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS: true
+          CI: true
+        run: |
+          cd Scrapers/mathacademyscraper
+          python scraper.py
+      - name: Upload debug artifacts (if any)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mathacademy-debug-screenshots
+          path: Scrapers/mathacademyscraper/debug_*.png
+          retention-days: 7
+          if-no-files-found: ignore
+
+  alpharead:
+    name: AlphaRead Scraper
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+          fetch-depth: 0
+          clean: true
+      - name: Debug - List repository structure
+        run: |
+          echo "=== Repository root ==="
+          ls -la
+          echo "=== Scrapers directory ==="
+          ls -la Scrapers/ || echo "Scrapers directory not found"
+          echo "=== AlphaRead scraper directory ==="
+          ls -la Scrapers/alphareadscraper/ || echo "AlphaRead directory not found"
+          echo "=== Package files ==="
+          find . -name "package*.json" -type f || echo "No package files found"
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      - name: Install dependencies
+        run: |
+          cd Scrapers/alphareadscraper
+          pwd
+          ls -la
+          npm ci
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            xvfb \
+            libnss3 \
+            libnspr4 \
+            libatk-bridge2.0-0 \
+            libdrm2 \
+            libxkbcommon0 \
+            libgtk-3-0 \
+            libgbm1 \
+            libasound2 \
+            libxrandr2 \
+            libxcomposite1 \
+            libxdamage1 \
+            libxss1 \
+            libatspi2.0-0
+      - name: Install Playwright Chromium only
+        env:
+          PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS: true
+          PLAYWRIGHT_BROWSERS_PATH: /home/runner/.cache/ms-playwright
+          CI: true
+        run: |
+          cd Scrapers/alphareadscraper
+          timeout 300 npx playwright install chromium --with-deps || echo "Playwright install completed or timed out"
+      - name: Run scraper
+        env:
+          ALPHAREAD_EMAIL: ${{ secrets.ALPHAREAD_EMAIL }}
+          ALPHAREAD_PASSWORD: ${{ secrets.ALPHAREAD_PASSWORD }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_KEY }}
+          TABLE_NAME: alpharead_students
+          ENABLE_LOGIN: true
+          SHOW_BROWSER: false
+          ENABLE_DATABASE_UPLOAD: true
+          CI: true
+          PLAYWRIGHT_BROWSERS_PATH: /home/runner/.cache/ms-playwright
+          PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS: true
+        run: |
+          cd Scrapers/alphareadscraper
+          npm run scrape-students
+      - name: Commit and push data
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add Scrapers/alphareadscraper/student-data-*.json || echo "No student data files to add"
+          git diff --staged --quiet || git commit -m "Automated AlphaRead data update - $(date)"
+          git pull --rebase origin main
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Upload debug artifacts (if any)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: alpharead-debug-screenshots
+          path: Scrapers/alphareadscraper/debug_*.png
+          retention-days: 7
+          if-no-files-found: ignore

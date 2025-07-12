@@ -1,0 +1,20 @@
+{
+  "emails": [
+    {
+      "email": "student1@example.com",
+      "name": "Student One",
+      "notes": "Example student - replace with actual data"
+    },
+    {
+      "email": "student2@example.com",
+      "name": "Student Two", 
+      "notes": "Example student - replace with actual data"
+    }
+  ],
+  "config": {
+    "format": "Choose either 'txt' or 'json' - this file supports both",
+    "scrapeMode": "individual",
+    "outputFormat": "separate-files-per-student",
+    "includeScreenshots": true
+  }
+} 
