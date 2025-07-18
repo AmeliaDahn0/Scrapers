@@ -82,6 +82,32 @@ A collection of web scrapers for various educational platforms and services.
 
 Each scraper can be run independently. Navigate to the specific scraper directory and follow the individual README instructions.
 
+### Running MemBean Scraper
+
+The MemBean scraper can run with or without local file storage:
+
+#### Without File Storage (Supabase Only)
+```bash
+cd membeanscraper
+source venv/bin/activate
+python membean_scraper.py
+```
+
+#### With File Storage (Traditional Mode)
+```bash
+cd membeanscraper
+source venv/bin/activate
+ENABLE_FILE_STORAGE=true python membean_scraper.py
+```
+
+### File Storage Control
+
+The MemBean scraper supports an optional environment variable `ENABLE_FILE_STORAGE`:
+- **Default**: `false` - Runs without creating/requiring data files, saves only to Supabase
+- **Set to `true`**: Creates and saves data to local JSON files in the `data/` directory
+
+This allows the scraper to run even if data files are missing or deleted.
+
 ### Example:
 ```bash
 cd membeanscraper
