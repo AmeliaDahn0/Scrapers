@@ -295,13 +295,22 @@ async def extract_report_data(page) -> Dict:
     return reports_data
 
 class DataCollector:
-    def __init__(self):
+    def __init__(self, enable_file_storage=True):
         self.data = {
             'timestamp': datetime.now().isoformat(),
             'url': '',
             'students': {}
         }
-        self.load_or_create_today_file()
+        self.enable_file_storage = enable_file_storage
+        
+        if self.enable_file_storage:
+            self.load_or_create_today_file()
+        else:
+            print("File storage disabled - running without data files")
+            # Initialize filenames for reference but don't create files
+            today = datetime.now().strftime('%Y-%m-%d')
+            self.filename = f'data/membean_data_{today}.json'
+            self.latest_filename = 'data/membean_data_latest.json'
     
     def load_or_create_today_file(self):
         """Load existing data or create new file for today"""
@@ -347,19 +356,24 @@ class DataCollector:
                     self.data['students'][student_id]['tabs_data'][tab_name] = student_data
     
     def save_to_file(self):
-        """Save data to both daily and latest files"""
+        """Save data to both daily and latest files (if file storage is enabled) and Supabase"""
         # Update timestamp
         self.data['timestamp'] = datetime.now().isoformat()
         
-        # Save to daily file
-        with open(self.filename, 'w') as f:
-            json.dump(self.data, f, indent=2)
+        if self.enable_file_storage:
+            # Save to daily file
+            with open(self.filename, 'w') as f:
+                json.dump(self.data, f, indent=2)
+            
+            # Save to latest file
+            with open(self.latest_filename, 'w') as f:
+                json.dump(self.data, f, indent=2)
+            
+            print(f"Data saved to {self.filename} and {self.latest_filename}")
+        else:
+            print("File storage disabled - skipping file save")
         
-        # Save to latest file
-        with open(self.latest_filename, 'w') as f:
-            json.dump(self.data, f, indent=2)
-        
-        # Save to Supabase
+        # Always save to Supabase
         self.save_to_supabase()
     
     def save_to_supabase(self):
@@ -533,7 +547,12 @@ async def process_student_data(page, student_name: str):
 
 async def main():
     global data_collector
-    data_collector = DataCollector()
+    
+    # Check if file storage should be enabled (default: False to avoid file dependency)
+    enable_file_storage = os.getenv('ENABLE_FILE_STORAGE', 'false').lower() == 'true'
+    
+    # Initialize data collector with file storage setting
+    data_collector = DataCollector(enable_file_storage=enable_file_storage)
     
     # Load the list of students to process
     students = load_student_list()
@@ -583,7 +602,7 @@ async def main():
                     print(f"Error processing student {student}: {e}")
                     continue  # Continue with next student
             
-            # Save all collected data to a single file
+            # Save all collected data (to Supabase and optionally to files)
             data_collector.save_to_file()
             print("Done! Browser will close automatically.")
             
