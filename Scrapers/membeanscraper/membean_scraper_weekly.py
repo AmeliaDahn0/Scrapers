@@ -459,11 +459,15 @@ async def process_student_data(page, student_name: str):
         return None
 
 class DataCollector:
-    def __init__(self):
+    def __init__(self, enable_file_storage=True):
         self.data = {
             'timestamp': datetime.now().isoformat(),
             'students': {}
         }
+        self.enable_file_storage = enable_file_storage
+        
+        if not self.enable_file_storage:
+            print("File storage disabled - running without data files")
     
     def add_student_data(self, students_data: List[Dict]):
         """Add student data to the collector"""
@@ -483,7 +487,11 @@ class DataCollector:
                 self.data['students'][student_id]['tabs_data'][tab_name] = data
     
     def save_to_file(self):
-        """Save collected data to a JSON file"""
+        """Save collected data to a JSON file (if file storage is enabled)"""
+        if not self.enable_file_storage:
+            print("File storage disabled - skipping file save")
+            return
+            
         # Create data directory if it doesn't exist
         os.makedirs('data', exist_ok=True)
         
@@ -506,8 +514,11 @@ async def main():
     students = load_student_list()
     print(f"Loaded {len(students)} students to process")
     
-    # Initialize data collector
-    collector = DataCollector()
+    # Check if file storage should be enabled (default: False to avoid file dependency)
+    enable_file_storage = os.getenv('ENABLE_FILE_STORAGE', 'false').lower() == 'true'
+    
+    # Initialize data collector with file storage setting
+    collector = DataCollector(enable_file_storage=enable_file_storage)
     
     async with async_playwright() as p:
         # Launch browser with custom settings
@@ -555,7 +566,7 @@ async def main():
         
         await browser.close()
     
-    # Save collected data
+    # Save collected data (to files if enabled)
     collector.save_to_file()
     print("Done!")
 
