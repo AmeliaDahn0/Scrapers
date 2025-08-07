@@ -304,7 +304,7 @@ class DataCollector:
         self.enable_file_storage = enable_file_storage
         
         if self.enable_file_storage:
-        self.load_or_create_today_file()
+            self.load_or_create_today_file()
         else:
             print("File storage disabled - running without data files")
             # Initialize filenames for reference but don't create files
@@ -361,14 +361,14 @@ class DataCollector:
         self.data['timestamp'] = datetime.now().isoformat()
         
         if self.enable_file_storage:
-        # Save to daily file
-        with open(self.filename, 'w') as f:
-            json.dump(self.data, f, indent=2)
-        
-        # Save to latest file
-        with open(self.latest_filename, 'w') as f:
-            json.dump(self.data, f, indent=2)
-        
+            # Save to daily file
+            with open(self.filename, 'w') as f:
+                json.dump(self.data, f, indent=2)
+
+            # Save to latest file
+            with open(self.latest_filename, 'w') as f:
+                json.dump(self.data, f, indent=2)
+
             print(f"Data saved to {self.filename} and {self.latest_filename}")
         else:
             print("File storage disabled - skipping file save")
