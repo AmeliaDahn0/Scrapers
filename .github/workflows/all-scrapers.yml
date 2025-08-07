@@ -270,12 +270,10 @@ jobs:
           ls -la
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-      - name: Install system dependencies for Chrome
+      - name: Install system dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            wget \
-            unzip \
             xvfb \
             libnss3 \
             libnspr4 \
@@ -289,24 +287,7 @@ jobs:
             libxcomposite1 \
             libxdamage1 \
             libxss1 \
-            libatspi2.0-0 \
-            fonts-liberation \
-            libappindicator3-1 \
-            libasound2 \
-            libatk-bridge2.0-0 \
-            libdrm2 \
-            libgtk-3-0 \
-            libnspr4 \
-            libnss3 \
-            libxss1 \
-            libxtst6 \
-            xdg-utils
-      - name: Install Google Chrome
-        run: |
-          wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
-          sudo sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list'
-          sudo apt-get update
-          sudo apt-get install -y google-chrome-stable
+            libatspi2.0-0
       - name: Run scraper
         env:
           ACELY_EMAIL: ${{ secrets.ACELY_EMAIL }}
@@ -316,8 +297,11 @@ jobs:
           HEADLESS_MODE: true
           WAIT_TIMEOUT: 15
           CI: true
+          DISPLAY: ":99"
         run: |
           cd Scrapers/acelyscraper
+          # Start virtual display for headless Chrome
+          Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &
           python step3_extract_data.py
       - name: Commit and push data
         run: |
