@@ -1,0 +1,9 @@
+selenium==4.15.2
+webdriver-manager==4.0.1
+python-dotenv==1.0.0
+beautifulsoup4==4.12.2
+requests==2.31.0
+pandas>=2.2.0
+loguru==0.7.2
+undetected-chromedriver>=3.5.0
+supabase>=2.0.0 
