@@ -501,57 +501,222 @@ class Step3ExtractData(AcelyAuthenticator):
     def extract_daily_activity_calendar(self):
         """Extract the daily activity calendar showing weekly activity patterns"""
         try:
-            # Look for the Daily Activity section in the calendar view
+            logger.info("🔍 Looking for Daily Activity calendar...")
+            
+            # Look for the main calendar container using the exact structure you provided
             calendar_selectors = [
-                # Look for the container with the weekly activity calendar
-                "//div[contains(@class, 'flex') and contains(@class, 'flex-col') and contains(@class, 'gap-8')]",
-                "//h2[contains(text(), 'Daily Activity')]/following-sibling::div//div[contains(@class, 'flex-col') and contains(@class, 'gap-8')]",
-                "//*[contains(text(), 'Daily Activity')]/parent::*/following-sibling::*//div[contains(@class, 'flex-col') and contains(@class, 'gap-8')]"
+                "//div[contains(@class, 'flex') and contains(@class, 'flex-col') and contains(@class, 'gap-8') and contains(@class, 'w-full')]",
+                "//div[@class='flex flex-col gap-8 w-full']"
             ]
             
-            activity_calendar = {}
-            
+            calendar_container = None
             for selector in calendar_selectors:
                 try:
-                    logger.debug(f"Trying calendar selector: {selector}")
-                    calendar_containers = self.driver.find_elements(By.XPATH, selector)
+                    containers = self.driver.find_elements(By.XPATH, selector)
+                    logger.debug(f"Found {len(containers)} containers with selector: {selector}")
                     
-                    for container in calendar_containers:
+                    for container in containers:
                         if container.is_displayed():
-                            # Look for week rows within this container
+                            # Check if this container has week rows with date patterns
                             week_rows = container.find_elements(By.XPATH, ".//div[contains(@class, 'flex-row') and contains(@class, 'items-center') and contains(@class, 'w-full') and contains(@class, 'justify-between')]")
-                            
                             if len(week_rows) > 0:
-                                logger.info(f"✅ Found {len(week_rows)} week rows in calendar")
-                                
-                                for week_row in week_rows:
-                                    # Extract week date range
-                                    date_element = week_row.find_element(By.XPATH, ".//div[contains(@class, 'text-sm') and contains(@class, 'font-medium') and contains(@class, 'text-neutral-600')]")
-                                    week_range = date_element.text.strip()
-                                    
-                                    # Extract daily activity for this week
-                                    week_data = self._extract_week_activity(week_row, week_range)
-                                    if week_data:
-                                        activity_calendar[week_range] = week_data
-                                        logger.debug(f"Extracted week {week_range}: {week_data}")
-                                
-                                if activity_calendar:
-                                    logger.info(f"✅ Successfully extracted calendar data for {len(activity_calendar)} weeks")
-                                    return activity_calendar
-                    
+                                # Check if any week row contains date patterns
+                                for row in week_rows:
+                                    date_elements = row.find_elements(By.XPATH, ".//div[contains(@class, 'text-sm') and contains(@class, 'font-medium') and contains(@class, 'text-neutral-600')]")
+                                    for date_elem in date_elements:
+                                        if "/" in date_elem.text and "-" in date_elem.text:
+                                            calendar_container = container
+                                            logger.info(f"✅ Found Daily Activity calendar container with {len(week_rows)} week rows")
+                                            break
+                                    if calendar_container:
+                                        break
+                            if calendar_container:
+                                break
+                    if calendar_container:
+                        break
+                        
                 except Exception as e:
                     logger.debug(f"Calendar selector {selector} failed: {e}")
                     continue
             
-            logger.warning("⚠️ Daily activity calendar not found with any selector")
-            return None
+            if not calendar_container:
+                logger.warning("⚠️ Daily Activity calendar container not found")
+                return None
+            
+            # Extract data from each week row
+            activity_calendar = {}
+            week_rows = calendar_container.find_elements(By.XPATH, ".//div[contains(@class, 'flex-row') and contains(@class, 'items-center') and contains(@class, 'w-full') and contains(@class, 'justify-between')]")
+            
+            for week_row in week_rows:
+                try:
+                    # Find the date range element
+                    date_elements = week_row.find_elements(By.XPATH, ".//div[contains(@class, 'text-sm') and contains(@class, 'font-medium') and contains(@class, 'text-neutral-600')]")
+                    
+                    for date_elem in date_elements:
+                        week_text = date_elem.text.strip()
+                        if "/" in week_text and "-" in week_text:  # Date pattern like "07/13 - 07/19"
+                            logger.info(f"Processing week: {week_text}")
+                            
+                            # Extract activity data for this week
+                            week_data = self._extract_week_activity_new(week_row, week_text)
+                            if week_data:
+                                activity_calendar[week_text] = week_data
+                                logger.info(f"✅ Extracted data for week {week_text}")
+                            break
+                            
+                except Exception as e:
+                    logger.debug(f"Failed to process week row: {e}")
+                    continue
+            
+            if activity_calendar:
+                logger.info(f"✅ Successfully extracted calendar data for {len(activity_calendar)} weeks")
+                return activity_calendar
+            else:
+                logger.warning("⚠️ No calendar data extracted")
+                return None
             
         except Exception as e:
             logger.error(f"❌ Failed to extract daily activity calendar: {e}")
             return None
     
+    def _extract_week_activity_new(self, week_row, week_range):
+        """Extract activity data for a single week row using the exact HTML structure"""
+        try:
+            days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+            week_data = {}
+            
+            logger.debug(f"Extracting activity for week: {week_range}")
+            
+            # Find all day columns - they have class "flex flex-col items-center"
+            day_columns = week_row.find_elements(By.XPATH, ".//div[contains(@class, 'flex') and contains(@class, 'flex-col') and contains(@class, 'items-center')]")
+            logger.debug(f"Found {len(day_columns)} day columns in week row")
+            
+            for i, day_column in enumerate(day_columns):
+                if i >= len(days):  # Skip if we have more columns than days
+                    break
+                    
+                day_name = days[i]
+                activity_status = False
+                questions_attempted = 0
+                
+                try:
+                    # Look for the tooltip with data-tip attribute
+                    tooltip_elements = day_column.find_elements(By.XPATH, ".//div[contains(@class, 'tooltip') and @data-tip]")
+                    
+                    if tooltip_elements:
+                        tooltip = tooltip_elements[0]
+                        data_tip = tooltip.get_attribute("data-tip")
+                        
+                        if data_tip:
+                            logger.debug(f"Day {day_name} tooltip: {data_tip}")
+                            
+                            # Extract question count from tooltip like "55 questions attempted on Jul 13th."
+                            import re
+                            match = re.search(r'(\d+)\s+questions?\s+attempted', data_tip)
+                            if match:
+                                questions_attempted = int(match.group(1))
+                                if questions_attempted > 0:
+                                    activity_status = True
+                            
+                            # Also check for "0 question attempted" (singular)
+                            elif "0 question attempted" in data_tip or "0 questions attempted" in data_tip:
+                                activity_status = False
+                                questions_attempted = 0
+                    
+                    # Double-check by looking at SVG class for active/inactive status
+                    svg_elements = day_column.find_elements(By.XPATH, ".//svg")
+                    for svg in svg_elements:
+                        class_attr = svg.get_attribute("class") or ""
+                        if "text-green-200" in class_attr:
+                            activity_status = True
+                            logger.debug(f"Day {day_name} confirmed ACTIVE (green SVG)")
+                        elif "text-neutral-200" in class_attr:
+                            # Only set to inactive if we don't already have questions from tooltip
+                            if questions_attempted == 0:
+                                activity_status = False
+                            logger.debug(f"Day {day_name} confirmed INACTIVE (neutral SVG)")
+                        break
+                    
+                except Exception as e:
+                    logger.debug(f"Error processing day {day_name}: {e}")
+                
+                week_data[day_name] = {
+                    "active": activity_status,
+                    "questions_attempted": questions_attempted
+                }
+                
+                logger.debug(f"Day {day_name}: active={activity_status}, questions={questions_attempted}")
+                
+            logger.debug(f"Week {week_range} final data: {week_data}")
+            return week_data
+            
+        except Exception as e:
+            logger.error(f"❌ Failed to extract week activity for {week_range}: {e}")
+            return None
+
+    def _extract_week_activity_simple(self, week_row, week_range):
+        """Extract activity data for a single week row using a simplified approach"""
+        try:
+            days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+            week_data = {}
+            
+            logger.debug(f"Extracting activity for week: {week_range}")
+            
+            # Look for all SVG elements in the week row - these represent the activity dots
+            svg_elements = week_row.find_elements(By.XPATH, ".//svg")
+            logger.debug(f"Found {len(svg_elements)} SVG elements in week row")
+            
+            # The SVGs should be in order: Sun, Mon, Tue, Wed, Thu, Fri, Sat
+            for i, day_name in enumerate(days):
+                activity_status = False
+                questions_attempted = 0
+                
+                if i < len(svg_elements):
+                    svg = svg_elements[i]
+                    
+                    # Check if the SVG has active styling (looking for color attributes)
+                    # Active days typically have green/yellow colors, inactive are gray
+                    svg_html = svg.get_attribute("outerHTML")
+                    class_attr = svg.get_attribute("class") or ""
+                    
+                    # Look for active indicators in the SVG
+                    if ("fill-green" in svg_html or 
+                        "fill-yellow" in svg_html or 
+                        "fill-lime" in svg_html or
+                        "text-green" in class_attr or
+                        "text-yellow" in class_attr or
+                        "text-lime" in class_attr):
+                        activity_status = True
+                        logger.debug(f"Day {day_name} appears ACTIVE based on SVG styling")
+                    else:
+                        logger.debug(f"Day {day_name} appears INACTIVE")
+                        
+                    # Try to get question count from parent element or tooltip
+                    try:
+                        parent_element = svg.find_element(By.XPATH, "./parent::*")
+                        title_attr = parent_element.get_attribute("title")
+                        if title_attr and "question" in title_attr.lower():
+                            import re
+                            match = re.search(r'(\d+)', title_attr)
+                            if match:
+                                questions_attempted = int(match.group(1))
+                    except:
+                        pass
+                
+                week_data[day_name] = {
+                    "active": activity_status,
+                    "questions_attempted": questions_attempted
+                }
+                
+            logger.debug(f"Week {week_range} data: {week_data}")
+            return week_data
+            
+        except Exception as e:
+            logger.error(f"❌ Failed to extract week activity for {week_range}: {e}")
+            return None
+
     def _extract_week_activity(self, week_row, week_range):
-        """Extract activity data for a single week row"""
+        """Extract activity data for a single week row (legacy method)"""
         try:
             days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
             week_data = {}
@@ -1117,6 +1282,72 @@ class Step3ExtractData(AcelyAuthenticator):
         except Exception as e:
             logger.error(f"❌ Failed to find student {target_email}: {e}")
             return None
+
+    def upload_individual_to_supabase(self, email, student_data):
+        """Upload individual student data to Supabase immediately after scraping"""
+        try:
+            # Load environment variables
+            load_dotenv()
+            
+            # Check if Supabase credentials are available
+            supabase_url = os.getenv("SUPABASE_URL")
+            supabase_key = os.getenv("SUPABASE_ANON_KEY")
+            
+            if not supabase_url or not supabase_key:
+                logger.warning("⚠️ Supabase credentials not found. Skipping individual upload.")
+                return False
+            
+            # Import Supabase (only when needed)
+            try:
+                from supabase import create_client, Client
+            except ImportError:
+                logger.warning("⚠️ Supabase library not installed. Skipping individual upload.")
+                return False
+            
+            # Connect to Supabase
+            supabase: Client = create_client(supabase_url, supabase_key)
+            
+            # Transform and upload the student's data
+            transformed = self.transform_student_data(student_data)
+            
+            # Insert new row to Supabase
+            result = supabase.table("acely_students").insert(transformed).execute()
+            
+            if result.data:
+                logger.info(f"☁️ Uploaded to Supabase: {transformed['name']} ({transformed['email']})")
+                return True
+            else:
+                logger.warning(f"⚠️ No data returned from Supabase for {transformed['name']}")
+                return False
+                        
+        except Exception as e:
+            logger.error(f"❌ Failed to upload individual data for {email}: {e}")
+            return False
+
+    def save_final_combined_data(self):
+        """Save final combined data to JSON file"""
+        try:
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"all_students_data_{timestamp}.json"
+            
+            # Create the final combined structure
+            final_data = {
+                "scrape_timestamp": timestamp,
+                "total_students": len(self.student_data),
+                "students_not_found": len(self.not_found_students),
+                "students": self.student_data,
+                "not_found_emails": self.not_found_students
+            }
+            
+            with open(filename, 'w', encoding='utf-8') as f:
+                json.dump(final_data, f, indent=2, ensure_ascii=False)
+            
+            logger.info(f"💾 Saved final combined data to: {filename}")
+            return filename
+            
+        except Exception as e:
+            logger.error(f"❌ Failed to save final combined data: {e}")
+            return None
     
     def scrape_all_students(self):
         """Main method to scrape data from all target students"""
@@ -1181,6 +1412,9 @@ class Step3ExtractData(AcelyAuthenticator):
                     self.student_data[target_email] = student_data
                     logger.info(f"✅ Data extracted for {target_email}")
                     
+                    # Upload to Supabase immediately
+                    self.upload_individual_to_supabase(target_email, student_data)
+                    
                     # Navigate back to student list for the next student
                     if email_index < len(self.target_emails) - 1:  # Don't navigate back after the last student
                         logger.info("🔄 Preparing for next student...")
@@ -1191,12 +1425,12 @@ class Step3ExtractData(AcelyAuthenticator):
                     logger.warning(f"⚠️ Student {target_email} not found or data extraction failed")
                     self.not_found_students.append(target_email)
             
-            # Upload data directly to Supabase (no JSON file for security)
+            # Save final combined data to JSON file
             if self.student_data:
-                logger.info("🚀 Uploading data directly to Supabase...")
-                self.upload_to_supabase_direct()
+                logger.info("💾 Saving final combined data to JSON...")
+                self.save_final_combined_data()
             else:
-                logger.warning("⚠️ No student data to upload to Supabase")
+                logger.warning("⚠️ No student data collected to save")
             
             # Final summary
             logger.info(f"\n{'='*60}")
