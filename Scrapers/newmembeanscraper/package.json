@@ -1,0 +1,31 @@
+{
+  "name": "membean-scraper",
+  "version": "1.0.0",
+  "description": "A Playwright-based scraper for Membean dashboard",
+  "main": "scraper.js",
+  "scripts": {
+    "start": "node scraper.js",
+    "install-browsers": "npx playwright install",
+    "test": "node scraper.js",
+    "scrape": "node scraper.js",
+    "students": "node manageStudents.js",
+    "students:list": "node manageStudents.js list",
+    "students:help": "node manageStudents.js help"
+  },
+  "keywords": [
+    "membean",
+    "scraper",
+    "playwright",
+    "automation"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.54.0",
+    "dotenv": "^16.3.1",
+    "playwright": "^1.40.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0"
+  }
+}
