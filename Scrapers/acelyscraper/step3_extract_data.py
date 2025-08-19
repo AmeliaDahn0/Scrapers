@@ -226,58 +226,108 @@ class Step3ExtractData(AcelyAuthenticator):
     
     def extract_most_recent_score(self):
         """Extract the most recent score from the student dashboard"""
+        import re
         try:
-            # Look for the most recent score using the specific element structure
+            # Look for the most recent score using comprehensive selectors
             score_selectors = [
-                # Using the exact class structure provided
+                # Most specific - the exact pattern we know
                 "//span[contains(@class, 'text-lg') and contains(@class, 'font-semibold') and contains(@class, 'underline') and contains(@class, 'decoration-yellow-800')]",
+                
                 # Alternative patterns for the score
                 "//span[contains(@class, 'text-lg') and contains(@class, 'font-semibold') and contains(@class, 'underline')]",
-                # Look for "Most Recent Score:" section and find the score span
-                "//*[contains(text(), 'Most Recent Score:')]/following-sibling::*//span[contains(@class, 'text-lg')]",
-                "//*[contains(text(), 'Most Recent Score:')]/parent::*//*[contains(@class, 'text-lg') and contains(@class, 'font-semibold')]",
-                # Broader search for the score pattern
-                "//span[contains(@class, 'decoration-yellow-800')]"
+                "//span[contains(@class, 'decoration-yellow-800')]",
+                
+                # Look for "Most Recent Score:" section and find nearby elements
+                "//*[contains(text(), 'Most Recent Score:')]/following-sibling::*//span",
+                "//*[contains(text(), 'Most Recent Score:')]/parent::*//*[contains(@class, 'text-lg')]",
+                "//*[contains(text(), 'Most Recent Score:')]/following-sibling::*//*",
+                "//*[contains(text(), 'Most Recent Score:')]/parent::*//*",
+                
+                # Look for "Most Recent Score" without colon
+                "//*[contains(text(), 'Most Recent Score')]/following-sibling::*//span",
+                "//*[contains(text(), 'Most Recent Score')]/parent::*//*",
+                
+                # Broader searches for score-like patterns
+                "//span[contains(@class, 'text-lg')]",
+                "//span[contains(@class, 'font-semibold')]",
+                "//span[contains(@class, 'underline')]",
+                
+                # Look for any element containing score-like text patterns
+                "//*[text()[contains(., '-')] and text()[contains(., '1')] and string-length(text()) < 20]",
+                "//*[contains(text(), '750')]",
+                "//*[contains(text(), '1150')]",
+                "//*[contains(text(), '750-1150')]",
+                
+                # Very broad - any text that might contain a score
+                "//*[text()]"
             ]
             
-            for selector in score_selectors:
+            logger.info("🔍 Starting score extraction...")
+            all_found_texts = []
+            
+            for i, selector in enumerate(score_selectors):
                 try:
-                    logger.debug(f"Trying score selector: {selector}")
+                    logger.debug(f"Trying score selector {i+1}/{len(score_selectors)}: {selector}")
                     elements = self.driver.find_elements(By.XPATH, selector)
+                    logger.debug(f"Found {len(elements)} elements with this selector")
                     
-                    for element in elements:
+                    for j, element in enumerate(elements):
                         if element.is_displayed():
                             text = element.text.strip()
-                            logger.debug(f"Found score element text: '{text}'")
-                            
-                            # Check if the text is a valid score (numeric)
-                            if text.isdigit():
-                                score = int(text)
-                                logger.info(f"✅ Extracted most recent score: {score}")
-                                return score
-                            elif text.replace('.', '', 1).isdigit():  # Handle decimal scores
-                                score = float(text)
-                                logger.info(f"✅ Extracted most recent score: {score}")
-                                return score
-                            else:
-                                # Check for composite score formats: "number - number" or "number-number"
-                                import re
-                                # Pattern to match: number (optional spaces) dash (optional spaces) number
-                                composite_pattern = r'^\d+\s*-\s*\d+$'
-                                if re.match(composite_pattern, text):
-                                    logger.info(f"✅ Extracted most recent score (composite): {text}")
-                                    return text  # Return the full composite score string
+                            if text:  # Only log non-empty text
+                                logger.debug(f"  Element {j+1}: '{text}'")
+                                all_found_texts.append(text)
+                                
+                                # Check if this looks like a score
+                                if self._is_valid_score(text):
+                                    logger.info(f"✅ Extracted most recent score: '{text}'")
+                                    return text
                     
                 except Exception as e:
-                    logger.debug(f"Selector {selector} failed: {e}")
+                    logger.debug(f"Selector {i+1} failed: {e}")
                     continue
             
-            logger.warning("⚠️ Most recent score not found with any selector")
+            # Log all found texts for debugging
+            if all_found_texts:
+                logger.warning(f"⚠️ Found {len(all_found_texts)} text elements but none matched score pattern:")
+                for text in set(all_found_texts):  # Remove duplicates
+                    logger.warning(f"  - '{text}'")
+            else:
+                logger.warning("⚠️ No text elements found with any selector")
+                
             return None
             
         except Exception as e:
             logger.error(f"❌ Failed to extract most recent score: {e}")
             return None
+    
+    def _is_valid_score(self, text):
+        """Check if text represents a valid score format"""
+        import re
+        
+        # Remove any extra whitespace
+        text = text.strip()
+        
+        # Check for simple integer
+        if text.isdigit():
+            return True
+            
+        # Check for decimal number
+        if text.replace('.', '', 1).isdigit():
+            return True
+            
+        # Check for composite score formats: "number-number" or "number - number"
+        composite_pattern = r'^\d+\s*-\s*\d+$'
+        if re.match(composite_pattern, text):
+            return True
+            
+        # Check for other possible score formats
+        # Match patterns like "750-1150", "1200 - 1400", etc.
+        extended_pattern = r'^\d+[-–—]\d+$'  # Includes different types of dashes
+        if re.match(extended_pattern, text):
+            return True
+            
+        return False
     
     def _parse_accuracy_text(self, text):
         """Parse accuracy text to extract this week and last week values"""
