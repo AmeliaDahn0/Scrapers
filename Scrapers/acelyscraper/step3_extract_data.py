@@ -259,6 +259,14 @@ class Step3ExtractData(AcelyAuthenticator):
                                 score = float(text)
                                 logger.info(f"✅ Extracted most recent score: {score}")
                                 return score
+                            elif ' - ' in text:  # Handle "number - number" format
+                                logger.info(f"✅ Extracted most recent score (composite): {text}")
+                                return text  # Return the full "number - number" string
+                            elif '-' in text and len(text.split('-')) == 2:  # Handle "number-number" format (no spaces)
+                                parts = text.split('-')
+                                if all(part.strip().isdigit() for part in parts):
+                                    logger.info(f"✅ Extracted most recent score (composite): {text}")
+                                    return text  # Return the full "number-number" string
                     
                 except Exception as e:
                     logger.debug(f"Selector {selector} failed: {e}")
