@@ -334,3 +334,88 @@ jobs:
           path: Scrapers/newmembeanscraper/*.png
           retention-days: 7
           if-no-files-found: ignore
+
+  fmp:
+    name: FMP Scraper
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+          fetch-depth: 0
+          clean: true
+      - name: Debug - List repository structure
+        run: |
+          echo "=== Repository root ==="
+          ls -la
+          echo "=== Scrapers directory ==="
+          ls -la Scrapers/ || echo "Scrapers directory not found"
+          echo "=== FMP scraper directory ==="
+          ls -la Scrapers/fmpscraper/ || echo "FMP directory not found"
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: |
+          cd Scrapers/fmpscraper
+          pwd
+          ls -la
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            xvfb \
+            libnss3 \
+            libnspr4 \
+            libatk-bridge2.0-0 \
+            libdrm2 \
+            libxkbcommon0 \
+            libgtk-3-0 \
+            libgbm1 \
+            libasound2 \
+            libxrandr2 \
+            libxcomposite1 \
+            libxdamage1 \
+            libxss1 \
+            libatspi2.0-0
+      - name: Run scraper
+        env:
+          USERNAME: ${{ secrets.FMP_USERNAME }}
+          PASSWORD: ${{ secrets.FMP_PASSWORD }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_KEY }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          HEADLESS_MODE: true
+          TIMEOUT_SECONDS: 30
+          RETRY_ATTEMPTS: 3
+          CI: true
+          DISPLAY: ":99"
+        run: |
+          cd Scrapers/fmpscraper
+          # Start virtual display for headless Chrome
+          Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &
+          python scraper.py
+      - name: Commit and push data
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add Scrapers/fmpscraper/*.json || echo "No JSON files to add"
+          git add Scrapers/fmpscraper/*.csv || echo "No CSV files to add"
+          git add Scrapers/fmpscraper/*.png || echo "No screenshot files to add"
+          git diff --staged --quiet || git commit -m "Automated FMP data update - $(date)"
+          git pull --rebase origin main
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Upload debug artifacts (if any)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fmp-debug-screenshots
+          path: Scrapers/fmpscraper/*.png
+          retention-days: 7
+          if-no-files-found: ignore
