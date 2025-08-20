@@ -1,0 +1,17 @@
+# FastMath Pro / AlphaMath School Login Credentials
+# Rename this file to .env and add your actual credentials
+
+# Login credentials for app.alphamath.school/admin
+USERNAME=your_username_here
+PASSWORD=your_password_here
+
+# Supabase Database Credentials
+# Get these from your Supabase project settings
+SUPABASE_URL=https://your-project-id.supabase.co
+SUPABASE_ANON_KEY=your_supabase_anon_key_here
+SUPABASE_SERVICE_KEY=your_supabase_service_role_key_here
+
+# Optional: Additional settings
+HEADLESS_MODE=true
+TIMEOUT_SECONDS=30
+RETRY_ATTEMPTS=3
