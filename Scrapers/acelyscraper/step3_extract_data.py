@@ -274,14 +274,25 @@ class Step3ExtractData(AcelyAuthenticator):
                     for j, element in enumerate(elements):
                         if element.is_displayed():
                             text = element.text.strip()
-                            if text:  # Only log non-empty text
-                                logger.debug(f"  Element {j+1}: '{text}'")
-                                all_found_texts.append(text)
-                                
-                                # Check if this looks like a score
-                                if self._is_valid_score(text):
-                                    logger.info(f"✅ Extracted most recent score: '{text}'")
-                                    return text
+                            logger.debug(f"Found score element text: '{text}'")
+                            
+                            # Check if the text is a valid score (numeric)
+                            if text.isdigit():
+                                score = int(text)
+                                logger.info(f"✅ Extracted most recent score: {score}")
+                                return score
+                            elif text.replace('.', '', 1).isdigit():  # Handle decimal scores
+                                score = float(text)
+                                logger.info(f"✅ Extracted most recent score: {score}")
+                                return score
+                            else:
+                                # Check for composite score formats: "number - number" or "number-number"
+                                import re
+                                # Pattern to match: number (optional spaces) dash (optional spaces) number
+                                composite_pattern = r'^\d+\s*-\s*\d+$'
+                                if re.match(composite_pattern, text):
+                                    logger.info(f"✅ Extracted most recent score (composite): {text}")
+                                    return text  # Return the full composite score string
                     
                 except Exception as e:
                     logger.debug(f"Selector {i+1} failed: {e}")
