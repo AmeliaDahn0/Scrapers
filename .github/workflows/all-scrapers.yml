@@ -382,6 +382,15 @@ jobs:
             libxdamage1 \
             libxss1 \
             libatspi2.0-0
+      - name: Debug secrets
+        run: |
+          echo "Checking if FMP secrets are available..."
+          echo "FMP_USERNAME length: ${#FMP_USERNAME}"
+          echo "FMP_PASSWORD length: ${#FMP_PASSWORD}"
+          echo "FMP_USERNAME starts with: ${FMP_USERNAME:0:3}"
+        env:
+          FMP_USERNAME: ${{ secrets.FMP_USERNAME }}
+          FMP_PASSWORD: ${{ secrets.FMP_PASSWORD }}
       - name: Run scraper
         env:
           USERNAME: ${{ secrets.FMP_USERNAME }}
