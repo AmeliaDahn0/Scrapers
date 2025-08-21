@@ -18,7 +18,8 @@ from datetime import datetime
 from dotenv import load_dotenv
 from supabase import create_client, Client
 
-# Load environment variables
+# Load environment variables from .env file if it exists (for local development)
+# In CI/GitHub Actions, environment variables are set directly
 load_dotenv()
 
 def setup_supabase_client():
@@ -128,13 +129,18 @@ def login_and_navigate_to_dashboard(driver):
     try:
         print("🔑 Logging in and navigating to dashboard...")
         
-        # Get credentials
+        # Get credentials from environment variables
         username = os.getenv('USERNAME')
         password = os.getenv('PASSWORD')
         
         if not username or not password:
-            print("❌ No credentials found in .env file")
+            print("❌ No credentials found in environment variables")
+            print(f"   USERNAME set: {'Yes' if username else 'No'}")
+            print(f"   PASSWORD set: {'Yes' if password else 'No'}")
+            print("   Make sure credentials are set in GitHub Actions secrets or .env file")
             return False
+        
+        print(f"✅ Credentials loaded successfully (USERNAME: {username[:3]}***)")
         
         # Navigate to admin downloads page first
         driver.get("https://app.alphamath.school/admin/downloads")
@@ -360,6 +366,16 @@ def run_tab_scraper():
     try:
         print("🚀 Starting Tab-Specific Scraper")
         print("🎯 Target tabs: Time Spent → Progress → CQPM")
+        
+        # Debug: Check if we're in CI and what environment variables are available
+        if os.getenv('CI', 'false').lower() == 'true':
+            print("🤖 Running in CI environment")
+            print(f"   SUPABASE_URL set: {'Yes' if os.getenv('SUPABASE_URL') else 'No'}")
+            print(f"   SUPABASE_SERVICE_KEY set: {'Yes' if os.getenv('SUPABASE_SERVICE_KEY') else 'No'}")
+            print(f"   USERNAME set: {'Yes' if os.getenv('USERNAME') else 'No'}")
+            print(f"   PASSWORD set: {'Yes' if os.getenv('PASSWORD') else 'No'}")
+        else:
+            print("🏠 Running in local environment")
         
         # Setup Supabase connection
         supabase = setup_supabase_client()
