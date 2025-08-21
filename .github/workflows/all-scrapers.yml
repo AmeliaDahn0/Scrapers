@@ -398,7 +398,7 @@ jobs:
           cd Scrapers/fmpscraper
           # Start virtual display for headless Chrome
           Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &
-          python scraper.py
+          python tab_specific_scraper.py
       - name: Commit and push data
         run: |
           git config --local user.email "action@github.com"

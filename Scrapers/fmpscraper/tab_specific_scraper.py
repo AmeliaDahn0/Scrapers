@@ -103,10 +103,20 @@ def upload_student_data_to_supabase(supabase, student_organized_data):
 def setup_driver():
     """Setup Chrome WebDriver"""
     chrome_options = Options()
-    # chrome_options.add_argument("--headless")  # Keep visible
+    
+    # Check if running in CI environment or headless mode is enabled
+    headless_mode = os.getenv('HEADLESS_MODE', 'false').lower() == 'true' or os.getenv('CI', 'false').lower() == 'true'
+    
+    if headless_mode:
+        chrome_options.add_argument("--headless")
+        print("🤖 Running in headless mode (CI environment detected)")
+    else:
+        print("👁️ Running in visible mode")
+    
     chrome_options.add_argument("--window-size=1200,800")
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
+    chrome_options.add_argument("--disable-gpu")
     
     service = Service(ChromeDriverManager().install())
     driver = webdriver.Chrome(service=service, options=chrome_options)
@@ -439,11 +449,14 @@ def run_tab_scraper():
         else:
             print("⚠️ Supabase upload failed - data is still saved locally")
         
-        # Keep browser open for inspection
-        print("\n👀 Browser will stay open for 20 seconds for you to inspect...")
-        for i in range(20, 0, -1):
-            print(f"⏰ Closing in {i} seconds...", end="\r")
-            time.sleep(1)
+        # Keep browser open for inspection (only in non-CI environments)
+        if not os.getenv('CI', 'false').lower() == 'true':
+            print("\n👀 Browser will stay open for 20 seconds for you to inspect...")
+            for i in range(20, 0, -1):
+                print(f"⏰ Closing in {i} seconds...", end="\r")
+                time.sleep(1)
+        else:
+            print("\n🤖 CI environment detected - closing browser immediately")
         
     except Exception as e:
         print(f"❌ Error: {e}")
