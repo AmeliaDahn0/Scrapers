@@ -130,14 +130,29 @@ def login_and_navigate_to_dashboard(driver):
         print("🔑 Logging in and navigating to dashboard...")
         
         # Get credentials from environment variables
-        username = os.getenv('USERNAME')
-        password = os.getenv('PASSWORD')
+        username = os.getenv('USERNAME') or os.getenv('FMP_USERNAME')
+        password = os.getenv('PASSWORD') or os.getenv('FMP_PASSWORD')
         
         if not username or not password:
             print("❌ No credentials found in environment variables")
-            print(f"   USERNAME set: {'Yes' if username else 'No'}")
-            print(f"   PASSWORD set: {'Yes' if password else 'No'}")
-            print("   Make sure credentials are set in GitHub Actions secrets or .env file")
+            print(f"   USERNAME set: {'Yes' if os.getenv('USERNAME') else 'No'}")
+            print(f"   PASSWORD set: {'Yes' if os.getenv('PASSWORD') else 'No'}")
+            print(f"   FMP_USERNAME set: {'Yes' if os.getenv('FMP_USERNAME') else 'No'}")
+            print(f"   FMP_PASSWORD set: {'Yes' if os.getenv('FMP_PASSWORD') else 'No'}")
+            print("   Make sure FMP_USERNAME and FMP_PASSWORD are set in GitHub Actions secrets")
+            
+            # Debug: Show all environment variables that start with 'FMP' or contain 'USER' or 'PASS'
+            print("   Available environment variables:")
+            for key in sorted(os.environ.keys()):
+                if any(keyword in key.upper() for keyword in ['FMP', 'USER', 'PASS', 'AUTH']):
+                    value = os.environ[key]
+                    # Mask sensitive values
+                    if any(sensitive in key.upper() for sensitive in ['PASS', 'KEY', 'SECRET', 'TOKEN']):
+                        masked_value = value[:3] + '***' if len(value) > 3 else '***'
+                    else:
+                        masked_value = value
+                    print(f"     {key}: {masked_value}")
+            
             return False
         
         print(f"✅ Credentials loaded successfully (USERNAME: {username[:3]}***)")
@@ -374,6 +389,8 @@ def run_tab_scraper():
             print(f"   SUPABASE_SERVICE_KEY set: {'Yes' if os.getenv('SUPABASE_SERVICE_KEY') else 'No'}")
             print(f"   USERNAME set: {'Yes' if os.getenv('USERNAME') else 'No'}")
             print(f"   PASSWORD set: {'Yes' if os.getenv('PASSWORD') else 'No'}")
+            print(f"   FMP_USERNAME set: {'Yes' if os.getenv('FMP_USERNAME') else 'No'}")
+            print(f"   FMP_PASSWORD set: {'Yes' if os.getenv('FMP_PASSWORD') else 'No'}")
         else:
             print("🏠 Running in local environment")
         
