@@ -90,8 +90,6 @@ class FastMathProScraper:
             
             if not username or not password:
                 logger.error("No credentials provided. Please set USERNAME and PASSWORD in .env file")
-                logger.error(f"USERNAME env var: {'SET' if os.getenv('USERNAME') else 'NOT SET'}")
-                logger.error(f"PASSWORD env var: {'SET' if os.getenv('PASSWORD') else 'NOT SET'}")
                 return False
             
             logger.info("Attempting to login...")
@@ -504,12 +502,6 @@ def main():
         # Initialize scraper
         logger.info("Starting FastMath Pro Downloads Scraper")
         logger.info(f"Configuration: Headless={headless_mode}, Timeout={timeout_seconds}s")
-        
-        # Debug environment variables
-        logger.info(f"Environment check - USERNAME: {'SET' if os.getenv('USERNAME') else 'NOT SET'}")
-        logger.info(f"Environment check - PASSWORD: {'SET' if os.getenv('PASSWORD') else 'NOT SET'}")
-        logger.info(f"Environment check - SUPABASE_URL: {'SET' if os.getenv('SUPABASE_URL') else 'NOT SET'}")
-        logger.info(f"Environment check - CI: {os.getenv('CI', 'NOT SET')}")
         scraper = FastMathProScraper(headless=headless_mode, timeout=timeout_seconds)
         
         # Scrape the downloads page

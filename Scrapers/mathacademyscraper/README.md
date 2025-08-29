@@ -72,13 +72,13 @@ python scraper.py
 ```
 
 The script will:
-1. Launch a browser window (visible for testing)
+1. Launch a browser window (headless mode)
 2. Log into Math Academy using your credentials
 3. Navigate to the teacher dashboard
-4. Extract student information (to be implemented based on dashboard structure)
+4. Extract comprehensive student information and save it to Supabase
 
 ## Notes
 
-- The script currently runs in headed mode (visible browser) for testing purposes
-- Modify the `scrape_teacher_dashboard()` function to extract specific information you need
-- The browser will stay open for 10 seconds after completion for debugging purposes 
+- The script runs in headless mode for production use
+- All data is automatically saved to your Supabase database
+- Each run creates new records with timestamps for historical tracking 

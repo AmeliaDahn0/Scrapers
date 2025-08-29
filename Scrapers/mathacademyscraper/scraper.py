@@ -11,9 +11,7 @@ from playwright.async_api import async_playwright
 import os
 from dotenv import load_dotenv
 import logging
-import json
 from datetime import datetime
-import pandas as pd
 from supabase import create_client
 import re
 from dateutil import parser as date_parser
@@ -65,17 +63,33 @@ def validate_supabase_connection():
 def load_target_students():
     """Load the list of target students from Supabase students table."""
     try:
-        # Query the students table to get all student names
-        response = supabase.table('students').select('name').execute()
+        # Try to query with math_academy_name column first
+        try:
+            response = supabase.table('students').select('name, math_academy_name').execute()
+        except Exception as e:
+            # If math_academy_name column doesn't exist, just get names
+            logger.info("math_academy_name column doesn't exist yet, using regular names")
+            response = supabase.table('students').select('name').execute()
         
         if response.data:
-            # Extract student names from the response
-            students = [student['name'] for student in response.data if student['name']]
+            # Create a mapping of math_academy_name -> database_name
+            students = set()
+            math_academy_mapping = {}
+            
+            for student in response.data:
+                # If math_academy_name exists, use it; otherwise use the regular name
+                if student.get('math_academy_name'):
+                    students.add(student['math_academy_name'])
+                    math_academy_mapping[student['math_academy_name']] = student['name']
+                else:
+                    students.add(student['name'])
+                    math_academy_mapping[student['name']] = student['name']
+            
             logger.info(f"Loaded {len(students)} target students from database")
-            return set(students)  # Using a set for faster lookups
+            return students, math_academy_mapping
         else:
             logger.warning("No target students found in database students table")
-            return set()
+            return set(), {}
             
     except Exception as e:
         logger.error(f"Error loading target students from database: {str(e)}")
@@ -91,13 +105,15 @@ def load_target_students():
                 ]
             if students:
                 logger.info(f"Loaded {len(students)} target students from fallback file")
-                return set(students)
+                students_set = set(students)
+                mapping = {name: name for name in students}  # Identity mapping for fallback
+                return students_set, mapping
             else:
                 logger.warning("No target students found in fallback file")
-                return set()
+                return set(), {}
         except FileNotFoundError:
             logger.error("Database query failed and no fallback target_students.txt file found")
-            return set()
+            return set(), {}
 
 async def login_to_math_academy(page):
     """Login to Math Academy using credentials from .env file."""
@@ -469,9 +485,9 @@ async def scrape_teacher_dashboard(browser):
             return
             
         # Load target students
-        target_students = load_target_students()
+        target_students, math_academy_mapping = load_target_students()
         if not target_students:
-            logger.error("No target students found. Please add students to target_students.txt")
+            logger.error("No target students found. Please add students to your Supabase students table")
             return
             
         # Create initial context and page
@@ -495,8 +511,8 @@ async def scrape_teacher_dashboard(browser):
         student_data = []
         
         # Wait for student elements to be visible and get all students
-        await page.wait_for_selector('div.student', timeout=10000)
-        student_elements = await page.query_selector_all('div.student')
+        await page.wait_for_selector('tr[id^="student-"]', timeout=30000)
+        student_elements = await page.query_selector_all('tr[id^="student-"]')
         logger.info(f"Found {len(student_elements)} student elements")
         
         # Get list of all students for logging
@@ -504,7 +520,7 @@ async def scrape_teacher_dashboard(browser):
         target_student_elements = []
         for student_elem in student_elements:
             try:
-                name_elem = await student_elem.query_selector('div.studentName')
+                name_elem = await student_elem.query_selector('td.studentName a.tableLink')
                 if name_elem:
                     name = await name_elem.text_content()
                     name = name.strip()
@@ -517,6 +533,69 @@ async def scrape_teacher_dashboard(browser):
                 
         logger.info(f"Found {len(all_names)} total students")
         logger.info(f"Found {len(target_student_elements)} target students")
+        
+        # Simple exact matching: only process students whose names in Supabase exactly match Math Academy
+        target_student_elements_corrected = []
+        
+        for student_elem in student_elements:
+            try:
+                name_elem = await student_elem.query_selector('td.studentName a.tableLink')
+                if name_elem:
+                    full_name = await name_elem.text_content()
+                    full_name = full_name.strip()
+                    
+                    # Extract and convert Math Academy name format to match Supabase format
+                    if ', ' in full_name:
+                        # Math Academy format: "A1234, Last, First" -> extract "Last, First"
+                        name_part = full_name.split(', ', 1)[1].strip()
+                        
+                        # Convert "Last, First" to "First Last" to match Supabase format
+                        if ', ' in name_part:
+                            last_name, first_name = name_part.split(', ', 1)
+                            actual_name = f"{first_name.strip()} {last_name.strip()}"
+                        else:
+                            actual_name = name_part.strip()
+                    else:
+                        actual_name = full_name.strip()
+                    
+                    # Check if this converted name matches any student in our database
+                    matched_db_name = None
+                    
+                    # Try direct match first
+                    if actual_name in target_students:
+                        matched_db_name = actual_name
+                    else:
+                        # Try matching with database first names
+                        for db_name in target_students:
+                            db_first_name = db_name.split()[0]
+                            if actual_name == db_first_name:
+                                matched_db_name = db_name
+                                break
+                    
+                    if matched_db_name:
+                        target_student_elements_corrected.append((matched_db_name, student_elem))
+                        logger.info(f"✅ Found target student: '{matched_db_name}' (Math Academy: '{full_name}' -> '{actual_name}')")
+            except Exception as e:
+                continue
+        
+        logger.info(f"Database target names: {list(target_students)[:10]}...")
+        logger.info(f"Found {len(target_student_elements_corrected)} exact matches")
+        
+        if len(target_student_elements_corrected) == 0:
+            logger.error("❌ No students matched!")
+            logger.error("")
+            logger.error("The student names in your Supabase 'students' table do not exactly match any names in Math Academy.")
+            logger.error("")
+            logger.error("SOLUTION: Update the 'name' column in your Supabase students table to exactly match")
+            logger.error("the corresponding names as they appear in Math Academy.")
+            logger.error("")
+            logger.error("For example, if 'Keyen Gupta' in your database is actually 'Duke' in Math Academy,")
+            logger.error("you need to update that row: UPDATE students SET name = 'Duke' WHERE name = 'Keyen Gupta';")
+            logger.error("")
+            logger.error("This scraper will ONLY process students whose names exactly match between both systems.")
+        
+        # Use the corrected list
+        target_student_elements = target_student_elements_corrected
         
         # Close initial page and context
         await page.close()
@@ -543,26 +622,43 @@ async def scrape_teacher_dashboard(browser):
                 await student_page.wait_for_load_state('networkidle')
                 
                 # Get student ID and basic info
-                student_elements = await student_page.query_selector_all('div.student')
+                student_elements = await student_page.query_selector_all('tr[id^="student-"]')
                 student_info = None
                 
                 for elem in student_elements:
-                    name_elem = await elem.query_selector('div.studentName')
+                    name_elem = await elem.query_selector('td.studentName a.tableLink')
                     if name_elem:
-                        name = await name_elem.text_content()
-                        name = name.strip()
-                        if name == student_name:
-                            # Get student ID from the div id attribute
+                        full_name = await name_elem.text_content()
+                        full_name = full_name.strip()
+                        
+                        # Extract and convert Math Academy name format to match Supabase format
+                        if ', ' in full_name:
+                            # Math Academy format: "A1234, Last, First" -> extract "Last, First"
+                            parts = full_name.split(', ')
+                            if len(parts) >= 3:
+                                # Format: "A1234, Last, First" -> "First Last"
+                                actual_name = f"{parts[2]} {parts[1]}"
+                            elif len(parts) == 2:
+                                # Format: "Last, First" -> "First Last"
+                                actual_name = f"{parts[1]} {parts[0]}"
+                            else:
+                                actual_name = full_name
+                        else:
+                            actual_name = full_name
+                        
+                        # Check if this converted name matches our target student
+                        if actual_name == student_name:
+                            # Get student ID from the tr id attribute
                             student_id_raw = await elem.get_attribute('id')
                             student_id = student_id_raw.split('-')[1] if student_id_raw else None
                             
                             if student_id:
                                 # Get dashboard information
-                                course_name_elem = await elem.query_selector('span.courseName')
-                                course_progress_elem = await elem.query_selector('div.courseProgress')
-                                last_activity_elem = await elem.query_selector('div.lastActivity')
-                                todays_xp_elem = await elem.query_selector('td.todaysXP')
-                                this_weeks_xp_elem = await elem.query_selector('span.thisWeeksXPValue')
+                                course_name_elem = await elem.query_selector('td.courseName')
+                                course_progress_elem = await elem.query_selector('td.studentProgress a.tableLink')
+                                last_activity_elem = await elem.query_selector('td.fieldData:nth-child(4)')
+                                todays_xp_elem = await elem.query_selector('td.studentDayXP')
+                                this_weeks_xp_elem = await elem.query_selector('td.studentWeekXP')
                                 
                                 # Extract text content and attributes
                                 course_name = await course_name_elem.text_content() if course_name_elem else ''
@@ -572,7 +668,7 @@ async def scrape_teacher_dashboard(browser):
                                 this_weeks_xp = await this_weeks_xp_elem.text_content() if this_weeks_xp_elem else ''
                                 
                                 # Get detailed information from student's page
-                                logger.info(f"Getting detailed information for student: {name}")
+                                logger.info(f"Getting detailed information for student: {actual_name}")
                                 detailed_info = await get_student_details(student_page, student_id)
                                 
                                 # Prepare data for Supabase
@@ -598,7 +694,7 @@ async def scrape_teacher_dashboard(browser):
 
                                 supabase_data = {
                                     'student_id': student_id,
-                                    'name': name,
+                                    'name': actual_name,
                                     'course_name': course_name.strip(),
                                     'percent_complete': course_progress.strip(),
                                     'last_activity': parsed_last_activity,
@@ -615,9 +711,9 @@ async def scrape_teacher_dashboard(browser):
                                 if supabase_data['student_id'] and supabase_data['name'] and supabase_data['student_id'].isdigit():
                                     success = await save_to_supabase(supabase_data)
                                     if success:
-                                        logger.info(f"Successfully saved data for student {name} to Supabase")
+                                        logger.info(f"Successfully saved data for student {actual_name} to Supabase")
                                     else:
-                                        logger.error(f"Failed to save data for student {name} to Supabase")
+                                        logger.error(f"Failed to save data for student {actual_name} to Supabase")
                                     student_data.append(supabase_data)
                                 else:
                                     logger.warning(f"Skipping student with missing or non-numeric student_id or name: {supabase_data}")
@@ -638,12 +734,7 @@ async def scrape_teacher_dashboard(browser):
             logger.warning("No data collected. Check if the student names in target_students.txt match exactly with Math Academy.")
             return
             
-        # Also save data to JSON file as backup
-        json_filename = 'student_data.json'
-        with open(json_filename, 'w') as f:
-            json.dump(student_data, f, indent=2)
-            
-        logger.info(f"Data saved to {json_filename}")
+        logger.info(f"Successfully processed {len(student_data)} students and saved to Supabase database")
         
     except Exception as e:
         logger.error(f"Error while scraping dashboard: {str(e)}")
