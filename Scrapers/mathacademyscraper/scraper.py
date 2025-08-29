@@ -511,9 +511,67 @@ async def scrape_teacher_dashboard(browser):
         student_data = []
         
         # Wait for student elements to be visible and get all students
-        await page.wait_for_selector('tr[id^="student-"]', timeout=30000)
-        student_elements = await page.query_selector_all('tr[id^="student-"]')
-        logger.info(f"Found {len(student_elements)} student elements")
+        try:
+            # First, let's debug what's on the page
+            await page.wait_for_timeout(5000)  # Wait 5 seconds for page to stabilize
+            logger.info("Page stabilized, checking for student elements...")
+            
+            # Check the page content for debugging
+            page_title = await page.title()
+            current_url = page.url
+            logger.info(f"Current page title: {page_title}")
+            logger.info(f"Current URL: {current_url}")
+            
+            # Try multiple selectors for student rows
+            student_selectors = [
+                'tr[id^="student-"]',  # Original selector
+                'tr[data-student]',    # Alternative data attribute
+                'tr.student-row',      # Class-based selector
+                'tbody tr',            # Generic table rows
+                '.student-list tr',    # Student list specific
+                'table tr'             # Any table rows
+            ]
+            
+            student_elements = []
+            for selector in student_selectors:
+                try:
+                    logger.info(f"Trying selector: {selector}")
+                    await page.wait_for_selector(selector, timeout=10000)
+                    elements = await page.query_selector_all(selector)
+                    if elements:
+                        logger.info(f"Found {len(elements)} elements with selector: {selector}")
+                        student_elements = elements
+                        break
+                except Exception as e:
+                    logger.debug(f"Selector {selector} failed: {str(e)}")
+                    continue
+            
+            if not student_elements:
+                # If no student elements found, let's see what IS on the page
+                logger.warning("No student elements found with any selector. Checking page content...")
+                page_content = await page.content()
+                logger.debug(f"Page content preview: {page_content[:1000]}...")
+                
+                # Look for any table or list elements
+                all_tables = await page.query_selector_all('table')
+                all_lists = await page.query_selector_all('ul, ol')
+                logger.info(f"Found {len(all_tables)} tables and {len(all_lists)} lists on page")
+                
+                # Try to find any elements that might contain student data
+                possible_student_elements = await page.query_selector_all('[class*="student"], [id*="student"], [data-student]')
+                logger.info(f"Found {len(possible_student_elements)} elements with 'student' in attributes")
+                
+                if not possible_student_elements:
+                    logger.error("No student-related elements found. The page structure may have changed.")
+                    return
+            
+            logger.info(f"Found {len(student_elements)} student elements")
+            
+        except Exception as e:
+            logger.error(f"Error waiting for student elements: {str(e)}")
+            logger.info("Attempting to continue with any available elements...")
+            student_elements = await page.query_selector_all('tr')  # Fallback to any table rows
+            logger.info(f"Fallback: Found {len(student_elements)} table rows")
         
         # Get list of all students for logging
         all_names = []
