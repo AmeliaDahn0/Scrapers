@@ -511,67 +511,9 @@ async def scrape_teacher_dashboard(browser):
         student_data = []
         
         # Wait for student elements to be visible and get all students
-        try:
-            # First, let's debug what's on the page
-            await page.wait_for_timeout(5000)  # Wait 5 seconds for page to stabilize
-            logger.info("Page stabilized, checking for student elements...")
-            
-            # Check the page content for debugging
-            page_title = await page.title()
-            current_url = page.url
-            logger.info(f"Current page title: {page_title}")
-            logger.info(f"Current URL: {current_url}")
-            
-            # Try multiple selectors for student rows
-            student_selectors = [
-                'tr[id^="student-"]',  # Original selector
-                'tr[data-student]',    # Alternative data attribute
-                'tr.student-row',      # Class-based selector
-                'tbody tr',            # Generic table rows
-                '.student-list tr',    # Student list specific
-                'table tr'             # Any table rows
-            ]
-            
-            student_elements = []
-            for selector in student_selectors:
-                try:
-                    logger.info(f"Trying selector: {selector}")
-                    await page.wait_for_selector(selector, timeout=10000)
-                    elements = await page.query_selector_all(selector)
-                    if elements:
-                        logger.info(f"Found {len(elements)} elements with selector: {selector}")
-                        student_elements = elements
-                        break
-                except Exception as e:
-                    logger.debug(f"Selector {selector} failed: {str(e)}")
-                    continue
-            
-            if not student_elements:
-                # If no student elements found, let's see what IS on the page
-                logger.warning("No student elements found with any selector. Checking page content...")
-                page_content = await page.content()
-                logger.debug(f"Page content preview: {page_content[:1000]}...")
-                
-                # Look for any table or list elements
-                all_tables = await page.query_selector_all('table')
-                all_lists = await page.query_selector_all('ul, ol')
-                logger.info(f"Found {len(all_tables)} tables and {len(all_lists)} lists on page")
-                
-                # Try to find any elements that might contain student data
-                possible_student_elements = await page.query_selector_all('[class*="student"], [id*="student"], [data-student]')
-                logger.info(f"Found {len(possible_student_elements)} elements with 'student' in attributes")
-                
-                if not possible_student_elements:
-                    logger.error("No student-related elements found. The page structure may have changed.")
-                    return
-            
-            logger.info(f"Found {len(student_elements)} student elements")
-            
-        except Exception as e:
-            logger.error(f"Error waiting for student elements: {str(e)}")
-            logger.info("Attempting to continue with any available elements...")
-            student_elements = await page.query_selector_all('tr')  # Fallback to any table rows
-            logger.info(f"Fallback: Found {len(student_elements)} table rows")
+        await page.wait_for_selector('tr[id^="student-"]', timeout=30000)
+        student_elements = await page.query_selector_all('tr[id^="student-"]')
+        logger.info(f"Found {len(student_elements)} student elements")
         
         # Get list of all students for logging
         all_names = []
@@ -592,52 +534,127 @@ async def scrape_teacher_dashboard(browser):
         logger.info(f"Found {len(all_names)} total students")
         logger.info(f"Found {len(target_student_elements)} target students")
         
-        # Simple exact matching: only process students whose names in Supabase exactly match Math Academy
+        # Improved matching: Create a more sophisticated name matching system
         target_student_elements_corrected = []
+        processed_students = set()  # Track processed student IDs to prevent duplicates
+        
+        # Create a mapping for better name matching
+        def normalize_name(name):
+            """Normalize name for better matching"""
+            return name.lower().strip().replace('.', '').replace(',', '')
+        
+        def extract_math_academy_name(full_name):
+            """Extract the actual name from Math Academy format"""
+            if ', ' in full_name:
+                # Math Academy format: "A1234, Last, First" or "Last, First"
+                parts = full_name.split(', ')
+                if len(parts) >= 3:
+                    # Format: "A1234, Last, First" -> "First Last"
+                    return f"{parts[2].strip()} {parts[1].strip()}"
+                elif len(parts) == 2:
+                    # Check if first part looks like an ID (starts with letter+numbers)
+                    if parts[0] and (parts[0][0].isalpha() and any(c.isdigit() for c in parts[0])):
+                        # Format: "A1234, FirstName" -> "FirstName"
+                        return parts[1].strip()
+                    else:
+                        # Format: "Last, First" -> "First Last"
+                        return f"{parts[1].strip()} {parts[0].strip()}"
+            return full_name.strip()
+        
+        # Create reverse mapping from database names for better matching
+        db_name_variants = {}
+        for db_name in target_students:
+            normalized = normalize_name(db_name)
+            db_name_variants[normalized] = db_name
+            
+            # Add first name only variant
+            first_name = db_name.split()[0]
+            first_normalized = normalize_name(first_name)
+            if first_normalized not in db_name_variants:
+                db_name_variants[first_normalized] = db_name
         
         for student_elem in student_elements:
             try:
+                # Get student ID to prevent duplicates
+                student_id_attr = await student_elem.get_attribute('id')
+                if not student_id_attr:
+                    continue
+                    
+                student_id = student_id_attr.replace('student-', '')
+                
+                # Skip if we've already processed this student ID
+                if student_id in processed_students:
+                    continue
+                
                 name_elem = await student_elem.query_selector('td.studentName a.tableLink')
                 if name_elem:
                     full_name = await name_elem.text_content()
                     full_name = full_name.strip()
                     
-                    # Extract and convert Math Academy name format to match Supabase format
-                    if ', ' in full_name:
-                        # Math Academy format: "A1234, Last, First" -> extract "Last, First"
-                        name_part = full_name.split(', ', 1)[1].strip()
-                        
-                        # Convert "Last, First" to "First Last" to match Supabase format
-                        if ', ' in name_part:
-                            last_name, first_name = name_part.split(', ', 1)
-                            actual_name = f"{first_name.strip()} {last_name.strip()}"
-                        else:
-                            actual_name = name_part.strip()
-                    else:
-                        actual_name = full_name.strip()
+                    # Extract the actual name from Math Academy format
+                    actual_name = extract_math_academy_name(full_name)
+                    normalized_actual = normalize_name(actual_name)
                     
-                    # Check if this converted name matches any student in our database
+                    # Try to find a match in our database
                     matched_db_name = None
                     
-                    # Try direct match first
-                    if actual_name in target_students:
-                        matched_db_name = actual_name
+                    # 1. Try exact match first
+                    if normalized_actual in db_name_variants:
+                        matched_db_name = db_name_variants[normalized_actual]
                     else:
-                        # Try matching with database first names
+                        # 2. Try matching individual words (for partial matches)
+                        actual_words = actual_name.lower().split()
                         for db_name in target_students:
-                            db_first_name = db_name.split()[0]
-                            if actual_name == db_first_name:
-                                matched_db_name = db_name
-                                break
+                            db_words = db_name.lower().split()
+                            
+                            # Check if all words in actual_name appear in db_name
+                            if len(actual_words) == len(db_words):
+                                if all(normalize_name(aw) == normalize_name(dw) for aw, dw in zip(actual_words, db_words)):
+                                    matched_db_name = db_name
+                                    break
                     
                     if matched_db_name:
                         target_student_elements_corrected.append((matched_db_name, student_elem))
-                        logger.info(f"✅ Found target student: '{matched_db_name}' (Math Academy: '{full_name}' -> '{actual_name}')")
+                        processed_students.add(student_id)
+                        logger.info(f"✅ Found target student: '{matched_db_name}' (Math Academy: '{full_name}' -> '{actual_name}', ID: {student_id})")
+                        
             except Exception as e:
+                logger.error(f"Error processing student element: {str(e)}")
                 continue
         
         logger.info(f"Database target names: {list(target_students)[:10]}...")
         logger.info(f"Found {len(target_student_elements_corrected)} exact matches")
+        
+        # Report on matching status
+        matched_db_names = {name for name, _ in target_student_elements_corrected}
+        unmatched_db_names = target_students - matched_db_names
+        
+        if matched_db_names:
+            logger.info(f"✅ Successfully matched students: {sorted(matched_db_names)}")
+        
+        if unmatched_db_names:
+            logger.warning(f"❌ Unmatched database students: {sorted(unmatched_db_names)}")
+            logger.info("🔍 Searching for similar names in Math Academy for unmatched students...")
+            
+            # Try to find similar names for debugging
+            for unmatched in unmatched_db_names:
+                logger.info(f"Looking for matches for: '{unmatched}'")
+                unmatched_words = unmatched.lower().split()
+                
+                # Look through first 50 Math Academy names for potential matches
+                potential_matches = []
+                for i, name in enumerate(all_names[:50]):
+                    ma_name = extract_math_academy_name(name)
+                    ma_words = ma_name.lower().split()
+                    
+                    # Check for partial matches
+                    if any(word in ' '.join(ma_words) for word in unmatched_words):
+                        potential_matches.append(f"'{name}' -> '{ma_name}'")
+                
+                if potential_matches:
+                    logger.info(f"   Potential matches: {potential_matches[:3]}")
+                else:
+                    logger.info(f"   No similar names found in first 50 Math Academy students")
         
         if len(target_student_elements_corrected) == 0:
             logger.error("❌ No students matched!")
@@ -659,8 +676,20 @@ async def scrape_teacher_dashboard(browser):
         await page.close()
         await context.close()
         
+        # Remove duplicates by database name (keep first occurrence)
+        seen_db_names = set()
+        unique_target_students = []
+        for db_name, student_elem in target_student_elements_corrected:
+            if db_name not in seen_db_names:
+                unique_target_students.append((db_name, student_elem))
+                seen_db_names.add(db_name)
+            else:
+                logger.info(f"⚠️ Skipping duplicate database student: {db_name}")
+        
+        logger.info(f"Processing {len(unique_target_students)} unique students (removed {len(target_student_elements_corrected) - len(unique_target_students)} duplicates)")
+        
         # Process each target student with a fresh context
-        for student_name, student_elem in target_student_elements:
+        for student_name, student_elem in unique_target_students:
             try:
                 logger.info(f"Processing student: {student_name}")
                 
