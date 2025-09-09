@@ -816,9 +816,13 @@ async def save_to_supabase(student_data):
 async def main():
     """Main function to run the scraper."""
     async with async_playwright() as p:
-        # Use headless mode in CI environments
-        is_ci = os.getenv('CI', 'false').lower() == 'true'
-        browser = await p.chromium.launch(headless=is_ci)
+        # Auto-detect environment: use headless in CI/server environments
+        import os
+        is_ci = os.getenv('CI') or os.getenv('GITHUB_ACTIONS') or os.getenv('HEADLESS')
+        headless_mode = is_ci or not os.getenv('DISPLAY')
+        
+        logger.info(f"Running in {'headless' if headless_mode else 'headed'} mode")
+        browser = await p.chromium.launch(headless=headless_mode)
         try:
             await scrape_teacher_dashboard(browser)
         finally:
