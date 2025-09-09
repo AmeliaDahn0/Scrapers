@@ -63,27 +63,18 @@ def validate_supabase_connection():
 def load_target_students():
     """Load the list of target students from Supabase students table."""
     try:
-        # Try to query with math_academy_name column first
-        try:
-            response = supabase.table('students').select('name, math_academy_name').execute()
-        except Exception as e:
-            # If math_academy_name column doesn't exist, just get names
-            logger.info("math_academy_name column doesn't exist yet, using regular names")
-            response = supabase.table('students').select('name').execute()
+        # Query just the names from the students table
+        response = supabase.table('students').select('name').execute()
         
         if response.data:
-            # Create a mapping of math_academy_name -> database_name
+            # Create a set of student names
             students = set()
             math_academy_mapping = {}
             
             for student in response.data:
-                # If math_academy_name exists, use it; otherwise use the regular name
-                if student.get('math_academy_name'):
-                    students.add(student['math_academy_name'])
-                    math_academy_mapping[student['math_academy_name']] = student['name']
-                else:
-                    students.add(student['name'])
-                    math_academy_mapping[student['name']] = student['name']
+                name = student['name']
+                students.add(name)
+                math_academy_mapping[name] = name  # Identity mapping
             
             logger.info(f"Loaded {len(students)} target students from database")
             return students, math_academy_mapping
@@ -511,22 +502,31 @@ async def scrape_teacher_dashboard(browser):
         student_data = []
         
         # Wait for student elements to be visible and get all students
-        await page.wait_for_selector('tr[id^="student-"]', timeout=30000)
-        student_elements = await page.query_selector_all('tr[id^="student-"]')
-        logger.info(f"Found {len(student_elements)} student elements")
+        await page.wait_for_selector('td[id^="studentName-"]', timeout=60000)
+        student_name_elements = await page.query_selector_all('td[id^="studentName-"]')
+        logger.info(f"Found {len(student_name_elements)} student name elements")
         
         # Get list of all students for logging
         all_names = []
         target_student_elements = []
-        for student_elem in student_elements:
+        for student_name_elem in student_name_elements:
             try:
-                name_elem = await student_elem.query_selector('td.studentName a.tableLink')
-                if name_elem:
-                    name = await name_elem.text_content()
-                    name = name.strip()
-                    all_names.append(name)
-                    if name in target_students:
-                        target_student_elements.append((name, student_elem))
+                # Get the student name link from within the TD
+                name_link = await student_name_elem.query_selector('a.studentNameLink')
+                if name_link:
+                    # Get the name (format: "Last, First")
+                    full_name = await name_link.text_content()
+                    full_name = full_name.strip()
+                    all_names.append(full_name)
+                    
+                    # Extract student ID from the TD's id attribute
+                    td_id = await student_name_elem.get_attribute('id')
+                    if td_id:
+                        student_id = td_id.replace('studentName-', '')
+                        # Find the parent row element for this student
+                        parent_row = await student_name_elem.evaluate('(element) => element.closest("tr")')
+                        if parent_row:
+                            target_student_elements.append((full_name, parent_row, student_id))
             except Exception as e:
                 logger.error(f"Error getting student name: {str(e)}")
                 continue
@@ -546,19 +546,11 @@ async def scrape_teacher_dashboard(browser):
         def extract_math_academy_name(full_name):
             """Extract the actual name from Math Academy format"""
             if ', ' in full_name:
-                # Math Academy format: "A1234, Last, First" or "Last, First"
+                # Math Academy format is "Last, First"
                 parts = full_name.split(', ')
-                if len(parts) >= 3:
-                    # Format: "A1234, Last, First" -> "First Last"
-                    return f"{parts[2].strip()} {parts[1].strip()}"
-                elif len(parts) == 2:
-                    # Check if first part looks like an ID (starts with letter+numbers)
-                    if parts[0] and (parts[0][0].isalpha() and any(c.isdigit() for c in parts[0])):
-                        # Format: "A1234, FirstName" -> "FirstName"
-                        return parts[1].strip()
-                    else:
-                        # Format: "Last, First" -> "First Last"
-                        return f"{parts[1].strip()} {parts[0].strip()}"
+                if len(parts) == 2:
+                    # Format: "Last, First" -> "First Last"
+                    return f"{parts[1].strip()} {parts[0].strip()}"
             return full_name.strip()
         
         # Create reverse mapping from database names for better matching
@@ -573,51 +565,62 @@ async def scrape_teacher_dashboard(browser):
             if first_normalized not in db_name_variants:
                 db_name_variants[first_normalized] = db_name
         
-        for student_elem in student_elements:
+        for full_name, student_row, student_id in target_student_elements:
             try:
-                # Get student ID to prevent duplicates
-                student_id_attr = await student_elem.get_attribute('id')
-                if not student_id_attr:
-                    continue
-                    
-                student_id = student_id_attr.replace('student-', '')
-                
                 # Skip if we've already processed this student ID
                 if student_id in processed_students:
                     continue
                 
-                name_elem = await student_elem.query_selector('td.studentName a.tableLink')
-                if name_elem:
-                    full_name = await name_elem.text_content()
-                    full_name = full_name.strip()
-                    
-                    # Extract the actual name from Math Academy format
-                    actual_name = extract_math_academy_name(full_name)
-                    normalized_actual = normalize_name(actual_name)
-                    
-                    # Try to find a match in our database
-                    matched_db_name = None
-                    
-                    # 1. Try exact match first
-                    if normalized_actual in db_name_variants:
-                        matched_db_name = db_name_variants[normalized_actual]
-                    else:
-                        # 2. Try matching individual words (for partial matches)
-                        actual_words = actual_name.lower().split()
-                        for db_name in target_students:
-                            db_words = db_name.lower().split()
-                            
-                            # Check if all words in actual_name appear in db_name
-                            if len(actual_words) == len(db_words):
-                                if all(normalize_name(aw) == normalize_name(dw) for aw, dw in zip(actual_words, db_words)):
-                                    matched_db_name = db_name
-                                    break
-                    
-                    if matched_db_name:
-                        target_student_elements_corrected.append((matched_db_name, student_elem))
-                        processed_students.add(student_id)
-                        logger.info(f"✅ Found target student: '{matched_db_name}' (Math Academy: '{full_name}' -> '{actual_name}', ID: {student_id})")
+                # Extract the actual name from Math Academy format
+                actual_name = extract_math_academy_name(full_name)
+                normalized_actual = normalize_name(actual_name)
+                
+                # Try to find a match in our database
+                matched_db_name = None
+                
+                # 1. Try exact match first
+                if normalized_actual in db_name_variants:
+                    matched_db_name = db_name_variants[normalized_actual]
+                else:
+                    # 2. Try matching individual words (for partial matches)
+                    actual_words = actual_name.lower().split()
+                    for db_name in target_students:
+                        db_words = db_name.lower().split()
                         
+                        # Check if all words in actual_name appear in db_name
+                        if len(actual_words) == len(db_words):
+                            if all(normalize_name(aw) == normalize_name(dw) for aw, dw in zip(actual_words, db_words)):
+                                matched_db_name = db_name
+                                break
+                
+                if matched_db_name:
+                    # Extract dashboard data immediately while elements are still valid
+                    dashboard_data = {}
+                    try:
+                        course_name_elem = await student_row.query_selector('td.courseName')
+                        course_progress_elem = await student_row.query_selector('td.studentProgress a.tableLink')
+                        last_activity_elem = await student_row.query_selector('td.fieldData:nth-child(4)')
+                        todays_xp_elem = await student_row.query_selector('td.studentDayXP')
+                        this_weeks_xp_elem = await student_row.query_selector('td.studentWeekXP')
+                        
+                        dashboard_data = {
+                            'course_name': await course_name_elem.text_content() if course_name_elem else '',
+                            'course_progress': await course_progress_elem.text_content() if course_progress_elem else '',
+                            'last_activity': await last_activity_elem.text_content() if last_activity_elem else '',
+                            'todays_xp': await todays_xp_elem.text_content() if todays_xp_elem else '',
+                            'this_weeks_xp': await this_weeks_xp_elem.text_content() if this_weeks_xp_elem else ''
+                        }
+                    except Exception as e:
+                        logger.warning(f"Could not extract dashboard data for {matched_db_name}: {str(e)}")
+                        dashboard_data = {
+                            'course_name': '', 'course_progress': '', 'last_activity': '',
+                            'todays_xp': '', 'this_weeks_xp': ''
+                        }
+                    
+                    target_student_elements_corrected.append((matched_db_name, dashboard_data, student_id))
+                    processed_students.add(student_id)
+                    logger.info(f"✅ Found target student: '{matched_db_name}' (Math Academy: '{full_name}' -> '{actual_name}', ID: {student_id})")
+                    
             except Exception as e:
                 logger.error(f"Error processing student element: {str(e)}")
                 continue
@@ -626,7 +629,7 @@ async def scrape_teacher_dashboard(browser):
         logger.info(f"Found {len(target_student_elements_corrected)} exact matches")
         
         # Report on matching status
-        matched_db_names = {name for name, _ in target_student_elements_corrected}
+        matched_db_names = {name for name, _, _ in target_student_elements_corrected}
         unmatched_db_names = target_students - matched_db_names
         
         if matched_db_names:
@@ -672,150 +675,94 @@ async def scrape_teacher_dashboard(browser):
         # Use the corrected list
         target_student_elements = target_student_elements_corrected
         
-        # Close initial page and context
-        await page.close()
-        await context.close()
+        # Keep the page and context open for processing students
+        # Don't close them yet - we'll use them for student processing
         
         # Remove duplicates by database name (keep first occurrence)
         seen_db_names = set()
         unique_target_students = []
-        for db_name, student_elem in target_student_elements_corrected:
+        for db_name, dashboard_data, student_id in target_student_elements_corrected:
             if db_name not in seen_db_names:
-                unique_target_students.append((db_name, student_elem))
+                unique_target_students.append((db_name, dashboard_data, student_id))
                 seen_db_names.add(db_name)
             else:
                 logger.info(f"⚠️ Skipping duplicate database student: {db_name}")
         
         logger.info(f"Processing {len(unique_target_students)} unique students (removed {len(target_student_elements_corrected) - len(unique_target_students)} duplicates)")
         
-        # Process each target student with a fresh context
-        for student_name, student_elem in unique_target_students:
+        # Process each target student using the same session
+        for student_name, dashboard_data, student_id in unique_target_students:
             try:
                 logger.info(f"Processing student: {student_name}")
                 
-                # Create new context and page for this student
-                student_context = await browser.new_context()
-                student_page = await student_context.new_page()
+                # Get detailed information from student's page using the existing student_id
+                logger.info(f"Getting detailed information for student: {student_name}")
+                detailed_info = await get_student_details(page, student_id)
                 
-                # Login again for this student's session
-                login_successful = await login_to_math_academy(student_page)
-                if not login_successful:
-                    logger.error(f"Failed to login for student: {student_name}")
-                    await student_context.close()
-                    continue
+                # Use pre-extracted dashboard data
+                course_name = dashboard_data.get('course_name', '')
+                course_progress = dashboard_data.get('course_progress', '')
+                last_activity = dashboard_data.get('last_activity', '')
+                todays_xp = dashboard_data.get('todays_xp', '')
+                this_weeks_xp = dashboard_data.get('this_weeks_xp', '')
                 
-                # Navigate to students page
-                await student_page.goto('https://www.mathacademy.com/students')
-                await student_page.wait_for_load_state('networkidle')
-                
-                # Get student ID and basic info
-                student_elements = await student_page.query_selector_all('tr[id^="student-"]')
-                student_info = None
-                
-                for elem in student_elements:
-                    name_elem = await elem.query_selector('td.studentName a.tableLink')
-                    if name_elem:
-                        full_name = await name_elem.text_content()
-                        full_name = full_name.strip()
-                        
-                        # Extract and convert Math Academy name format to match Supabase format
-                        if ', ' in full_name:
-                            # Math Academy format: "A1234, Last, First" -> extract "Last, First"
-                            parts = full_name.split(', ')
-                            if len(parts) >= 3:
-                                # Format: "A1234, Last, First" -> "First Last"
-                                actual_name = f"{parts[2]} {parts[1]}"
-                            elif len(parts) == 2:
-                                # Format: "Last, First" -> "First Last"
-                                actual_name = f"{parts[1]} {parts[0]}"
-                            else:
-                                actual_name = full_name
-                        else:
-                            actual_name = full_name
-                        
-                        # Check if this converted name matches our target student
-                        if actual_name == student_name:
-                            # Get student ID from the tr id attribute
-                            student_id_raw = await elem.get_attribute('id')
-                            student_id = student_id_raw.split('-')[1] if student_id_raw else None
-                            
-                            if student_id:
-                                # Get dashboard information
-                                course_name_elem = await elem.query_selector('td.courseName')
-                                course_progress_elem = await elem.query_selector('td.studentProgress a.tableLink')
-                                last_activity_elem = await elem.query_selector('td.fieldData:nth-child(4)')
-                                todays_xp_elem = await elem.query_selector('td.studentDayXP')
-                                this_weeks_xp_elem = await elem.query_selector('td.studentWeekXP')
-                                
-                                # Extract text content and attributes
-                                course_name = await course_name_elem.text_content() if course_name_elem else ''
-                                course_progress = await course_progress_elem.text_content() if course_progress_elem else ''
-                                last_activity = await last_activity_elem.text_content() if last_activity_elem else ''
-                                todays_xp = await todays_xp_elem.text_content() if todays_xp_elem else ''
-                                this_weeks_xp = await this_weeks_xp_elem.text_content() if this_weeks_xp_elem else ''
-                                
-                                # Get detailed information from student's page
-                                logger.info(f"Getting detailed information for student: {actual_name}")
-                                detailed_info = await get_student_details(student_page, student_id)
-                                
-                                # Prepare data for Supabase
-                                parsed_last_activity = parse_last_activity(last_activity.strip())
+                # Prepare data for Supabase
+                parsed_last_activity = parse_last_activity(last_activity.strip())
 
-                                # Fallback: if parsed_last_activity is None, use the most recent date from daily_activity
-                                if not parsed_last_activity and detailed_info and detailed_info.get('daily_activity'):
-                                    daily_activity = detailed_info['daily_activity']
-                                    if daily_activity:
-                                        # Try to get the most recent date key
-                                        try:
-                                            # Remove extra whitespace and sort by parsed date
-                                            def parse_key_to_date(key):
-                                                # Remove newlines and extra spaces
-                                                date_str = key.split('\n')[0].strip()
-                                                # Add current year for parsing
-                                                return date_parser.parse(date_str + ' ' + str(datetime.now().year))
-                                            most_recent = max(daily_activity.keys(), key=parse_key_to_date)
-                                            dt = parse_key_to_date(most_recent)
-                                            parsed_last_activity = dt.replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
-                                        except Exception:
-                                            parsed_last_activity = None
+                # Fallback: if parsed_last_activity is None, use the most recent date from daily_activity
+                if not parsed_last_activity and detailed_info and detailed_info.get('daily_activity'):
+                    daily_activity = detailed_info['daily_activity']
+                    if daily_activity:
+                        # Try to get the most recent date key
+                        try:
+                            # Remove extra whitespace and sort by parsed date
+                            def parse_key_to_date(key):
+                                # Remove newlines and extra spaces
+                                date_str = key.split('\n')[0].strip()
+                                # Add current year for parsing
+                                return date_parser.parse(date_str + ' ' + str(datetime.now().year))
+                            most_recent = max(daily_activity.keys(), key=parse_key_to_date)
+                            dt = parse_key_to_date(most_recent)
+                            parsed_last_activity = dt.replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
+                        except Exception:
+                            parsed_last_activity = None
 
-                                supabase_data = {
-                                    'student_id': student_id,
-                                    'name': actual_name,
-                                    'course_name': course_name.strip(),
-                                    'percent_complete': course_progress.strip(),
-                                    'last_activity': parsed_last_activity,
-                                    'daily_xp': todays_xp.strip(),
-                                    'weekly_xp': this_weeks_xp.strip(),
-                                    'expected_weekly_xp': detailed_info.get('expected_weekly_xp') if detailed_info else None,
-                                    'estimated_completion': detailed_info.get('estimated_completion') if detailed_info else None,
-                                    'student_url': f'https://www.mathacademy.com/students/{student_id}/activity',
-                                    'daily_activity': detailed_info.get('daily_activity', {}) if detailed_info else {},
-                                    'tasks': detailed_info.get('tasks', []) if detailed_info else []
-                                }
+                supabase_data = {
+                    'student_id': student_id,
+                    'name': student_name,
+                    'course_name': course_name.strip(),
+                    'percent_complete': course_progress.strip(),
+                    'last_activity': parsed_last_activity,
+                    'daily_xp': todays_xp.strip(),
+                    'weekly_xp': this_weeks_xp.strip(),
+                    'expected_weekly_xp': detailed_info.get('expected_weekly_xp') if detailed_info else None,
+                    'estimated_completion': detailed_info.get('estimated_completion') if detailed_info else None,
+                    'student_url': f'https://www.mathacademy.com/students/{student_id}/activity',
+                    'daily_activity': detailed_info.get('daily_activity', {}) if detailed_info else {},
+                    'tasks': detailed_info.get('tasks', []) if detailed_info else []
+                }
 
-                                # Only save if student_id and name are present, and student_id is numeric
-                                if supabase_data['student_id'] and supabase_data['name'] and supabase_data['student_id'].isdigit():
-                                    success = await save_to_supabase(supabase_data)
-                                    if success:
-                                        logger.info(f"Successfully saved data for student {actual_name} to Supabase")
-                                    else:
-                                        logger.error(f"Failed to save data for student {actual_name} to Supabase")
-                                    student_data.append(supabase_data)
-                                else:
-                                    logger.warning(f"Skipping student with missing or non-numeric student_id or name: {supabase_data}")
-                                break
+                # Only save if student_id and name are present, and student_id is numeric
+                if supabase_data['student_id'] and supabase_data['name'] and supabase_data['student_id'].isdigit():
+                    success = await save_to_supabase(supabase_data)
+                    if success:
+                        logger.info(f"Successfully saved data for student {student_name} to Supabase")
+                    else:
+                        logger.error(f"Failed to save data for student {student_name} to Supabase")
+                    student_data.append(supabase_data)
+                else:
+                    logger.warning(f"Skipping student with missing or non-numeric student_id or name: {supabase_data}")
                 
-                # Close this student's context
-                await student_page.close()
-                await student_context.close()
-                
-                # Add a delay between students
-                await asyncio.sleep(3)
+                # Small delay between students to be respectful
+                await asyncio.sleep(2)
                 
             except Exception as e:
                 logger.error(f"Error processing student {student_name}: {str(e)}")
                 continue
+        
+        # Close the page and context after processing all students
+        await page.close()
+        await context.close()
         
         if not student_data:
             logger.warning("No data collected. Check if the student names in target_students.txt match exactly with Math Academy.")
@@ -869,7 +816,7 @@ async def save_to_supabase(student_data):
 async def main():
     """Main function to run the scraper."""
     async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=True)
+        browser = await p.chromium.launch(headless=False)
         try:
             await scrape_teacher_dashboard(browser)
         finally:
