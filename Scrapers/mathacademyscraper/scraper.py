@@ -818,8 +818,17 @@ async def main():
     async with async_playwright() as p:
         # Auto-detect environment: use headless in CI/server environments
         import os
-        is_ci = os.getenv('CI') or os.getenv('GITHUB_ACTIONS') or os.getenv('HEADLESS')
-        headless_mode = is_ci or not os.getenv('DISPLAY')
+        
+        def str_to_bool(val):
+            """Convert string environment variable to boolean."""
+            if isinstance(val, bool):
+                return val
+            if isinstance(val, str):
+                return val.lower() in ('true', '1', 'yes', 'on')
+            return bool(val) if val else False
+        
+        is_ci = str_to_bool(os.getenv('CI')) or str_to_bool(os.getenv('GITHUB_ACTIONS')) or str_to_bool(os.getenv('HEADLESS'))
+        headless_mode = bool(is_ci or not os.getenv('DISPLAY'))
         
         logger.info(f"Running in {'headless' if headless_mode else 'headed'} mode")
         browser = await p.chromium.launch(headless=headless_mode)
