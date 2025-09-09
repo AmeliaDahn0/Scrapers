@@ -816,7 +816,9 @@ async def save_to_supabase(student_data):
 async def main():
     """Main function to run the scraper."""
     async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=False)
+        # Use headless mode in CI environments
+        is_ci = os.getenv('CI', 'false').lower() == 'true'
+        browser = await p.chromium.launch(headless=is_ci)
         try:
             await scrape_teacher_dashboard(browser)
         finally:
