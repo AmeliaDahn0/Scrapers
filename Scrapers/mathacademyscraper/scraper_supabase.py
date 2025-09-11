@@ -634,7 +634,11 @@ class MathAcademySupabaseScraper:
             return []
             
         async with async_playwright() as p:
-            browser = await p.chromium.launch(headless=False)
+            # Auto-detect headless mode for CI environments
+            is_ci = os.getenv('CI', '').lower() == 'true' or os.getenv('GITHUB_ACTIONS', '').lower() == 'true'
+            headless_mode = is_ci or not os.getenv('DISPLAY')
+            
+            browser = await p.chromium.launch(headless=headless_mode)
             page = await browser.new_page()
             
             try:
