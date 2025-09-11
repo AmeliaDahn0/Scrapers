@@ -55,7 +55,7 @@ jobs:
           CI: "true"
         run: |
           cd Scrapers/mathacademyscraper
-          timeout 600 python scraper.py || echo "Scraper completed or timed out after 10 minutes"
+          timeout 600 python scraper_supabase.py || echo "Scraper completed or timed out after 10 minutes"
       - name: Upload debug artifacts (if any)
         if: always()
         uses: actions/upload-artifact@v4
