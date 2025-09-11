@@ -55,8 +55,6 @@ jobs:
           CI: "true"
         run: |
           cd Scrapers/mathacademyscraper
-          # Create empty student names file to trigger processing of all students
-          touch student_names_to_scrape.txt
           timeout 600 python scraper_supabase.py || echo "Scraper completed or timed out after 10 minutes"
       - name: Upload debug artifacts (if any)
         if: always()
