@@ -602,7 +602,7 @@ class MathAcademySupabaseUpdater:
     async def scrape_and_update_supabase(self) -> List[Dict[str, Any]]:
         """Main scraping method - extract data and update Supabase"""
         async with async_playwright() as p:
-            browser = await p.chromium.launch(headless=False)
+            browser = await p.chromium.launch(headless=True)
             page = await browser.new_page()
             
             try:
