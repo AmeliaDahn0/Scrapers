@@ -104,7 +104,20 @@ class TestSingleStudent:
                 else:
                     print("✗ Course completion element not found")
                 
-                # 4. Task rows
+                # 4. Estimated completion date
+                estimated_completion_element = soup.find('div', id='estimatedCompletion')
+                if estimated_completion_element:
+                    span_element = estimated_completion_element.find('span')
+                    if span_element:
+                        estimated_date = span_element.get_text(strip=True)
+                        print(f"✓ Estimated completion: {estimated_date}")
+                    else:
+                        full_text = estimated_completion_element.get_text(strip=True)
+                        print(f"✓ Estimated completion (full): {full_text}")
+                else:
+                    print("✗ Estimated completion element not found")
+                
+                # 5. Task rows
                 task_rows = soup.find_all('tr', id=re.compile(r'task-\d+'))
                 if task_rows:
                     print(f"✓ Found {len(task_rows)} task rows")
@@ -119,7 +132,7 @@ class TestSingleStudent:
                 else:
                     print("✗ No task rows found")
                 
-                # 5. Date headers
+                # 6. Date headers
                 date_headers = soup.find_all('td', class_='dateHeader')
                 if date_headers:
                     print(f"✓ Found {len(date_headers)} date headers")
@@ -136,7 +149,7 @@ class TestSingleStudent:
                 # Look for any elements with the IDs we're targeting
                 print("\n=== Checking for target IDs in page ===")
                 all_ids = [elem.get('id') for elem in soup.find_all(id=True)]
-                target_ids = ['thisWeekTotalXP', 'dailyGoalPoints', 'coursePercentComplete']
+                target_ids = ['thisWeekTotalXP', 'dailyGoalPoints', 'coursePercentComplete', 'estimatedCompletion']
                 
                 for target_id in target_ids:
                     if target_id in all_ids:

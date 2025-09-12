@@ -234,12 +234,20 @@ class MathAcademySupabaseScraper:
                 detailed_data['daily_xp'] = daily_xp_text
                 print(f"    → Found daily XP: {daily_xp_text}")
             
-            # 3. Course completion percentage from <div id="coursePercentComplete">29%</div>
-            course_percent_element = soup.find('div', id='coursePercentComplete')
-            if course_percent_element:
-                course_percent_text = course_percent_element.get_text(strip=True)
-                detailed_data['estimated_completion'] = course_percent_text
-                print(f"    → Found course completion: {course_percent_text}")
+            # 3. Estimated completion date from <div id="estimatedCompletion">
+            estimated_completion_element = soup.find('div', id='estimatedCompletion')
+            if estimated_completion_element:
+                # Extract the date from the span inside the div
+                span_element = estimated_completion_element.find('span')
+                if span_element:
+                    estimated_date = span_element.get_text(strip=True)
+                    detailed_data['estimated_completion'] = estimated_date
+                    print(f"    → Found estimated completion: {estimated_date}")
+                else:
+                    # Fallback: get all text and extract date
+                    full_text = estimated_completion_element.get_text(strip=True)
+                    detailed_data['estimated_completion'] = full_text
+                    print(f"    → Found estimated completion (full): {full_text}")
             
             # 4. Extract detailed daily activity from task table
             # Look for all task rows: <tr id="task-XXXXX" class="task task" type="Review">
@@ -370,6 +378,22 @@ class MathAcademySupabaseScraper:
                         detailed_data['tasks'][f'table_{table_idx}'] = table_data
                     else:
                         detailed_data['daily_activity'][f'general_table_{table_idx}'] = table_data
+            
+            # IMPORTANT: Re-extract estimated completion AFTER table processing to ensure correct value
+            # This prevents table extraction from overwriting the correct estimated completion
+            estimated_completion_element = soup.find('div', id='estimatedCompletion')
+            if estimated_completion_element:
+                # Extract the date from the span inside the div
+                span_element = estimated_completion_element.find('span')
+                if span_element:
+                    estimated_date = span_element.get_text(strip=True)
+                    detailed_data['estimated_completion'] = estimated_date
+                    print(f"    → Final estimated completion: {estimated_date}")
+                else:
+                    # Fallback: get all text and extract date
+                    full_text = estimated_completion_element.get_text(strip=True)
+                    detailed_data['estimated_completion'] = full_text
+                    print(f"    → Final estimated completion (full): {full_text}")
             
             # Look for JavaScript data more comprehensively
             scripts = soup.find_all('script')
@@ -634,11 +658,7 @@ class MathAcademySupabaseScraper:
             return []
             
         async with async_playwright() as p:
-            # Auto-detect headless mode for CI environments
-            is_ci = os.getenv('CI', '').lower() == 'true' or os.getenv('GITHUB_ACTIONS', '').lower() == 'true'
-            headless_mode = is_ci or not os.getenv('DISPLAY')
-            
-            browser = await p.chromium.launch(headless=headless_mode)
+            browser = await p.chromium.launch(headless=False)
             page = await browser.new_page()
             
             try:
