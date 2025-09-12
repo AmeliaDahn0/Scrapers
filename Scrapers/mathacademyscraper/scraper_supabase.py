@@ -235,19 +235,37 @@ class MathAcademySupabaseScraper:
                 print(f"    → Found daily XP: {daily_xp_text}")
             
             # 3. Estimated completion date from <div id="estimatedCompletion">
-            estimated_completion_element = soup.find('div', id='estimatedCompletion')
-            if estimated_completion_element:
-                # Extract the date from the span inside the div
-                span_element = estimated_completion_element.find('span')
-                if span_element:
-                    estimated_date = span_element.get_text(strip=True)
-                    detailed_data['estimated_completion'] = estimated_date
-                    print(f"    → Found estimated completion: {estimated_date}")
-                else:
-                    # Fallback: get all text and extract date
-                    full_text = estimated_completion_element.get_text(strip=True)
-                    detailed_data['estimated_completion'] = full_text
-                    print(f"    → Found estimated completion (full): {full_text}")
+            # Try multiple times to handle timing issues
+            estimated_completion_found = False
+            for attempt in range(3):
+                if attempt > 0:
+                    print(f"    → Retrying estimated completion extraction (attempt {attempt + 1})")
+                    await page.wait_for_timeout(1000)  # Wait 1 second before retry
+                    content = await page.content()
+                    soup = BeautifulSoup(content, 'html.parser')
+                
+                estimated_completion_element = soup.find('div', id='estimatedCompletion')
+                if estimated_completion_element:
+                    # Extract the date from the span inside the div
+                    span_element = estimated_completion_element.find('span')
+                    if span_element:
+                        estimated_date = span_element.get_text(strip=True)
+                        detailed_data['estimated_completion'] = estimated_date
+                        print(f"    → Found estimated completion: {estimated_date}")
+                        estimated_completion_found = True
+                        break
+                    else:
+                        # Fallback: get all text and extract date
+                        full_text = estimated_completion_element.get_text(strip=True)
+                        detailed_data['estimated_completion'] = full_text
+                        print(f"    → Found estimated completion (full): {full_text}")
+                        estimated_completion_found = True
+                        break
+            
+            if not estimated_completion_found:
+                print(f"    ✗ No estimatedCompletion element found for {student_name} after 3 attempts")
+                # Set to None explicitly so it gets included in the database update
+                detailed_data['estimated_completion'] = None
             
             # 4. Extract detailed daily activity from task table
             # Look for all task rows: <tr id="task-XXXXX" class="task task" type="Review">
@@ -603,10 +621,14 @@ class MathAcademySupabaseScraper:
                     # Prepare data for Supabase (remove None values and ensure JSON fields are properly formatted)
                     supabase_data = {}
                     for key, value in student_data.items():
-                        if value is not None:
-                            # Skip error field as it's not in the Supabase schema
-                            if key == 'error':
-                                continue
+                        # Skip error field as it's not in the Supabase schema
+                        if key == 'error':
+                            continue
+                        
+                        # For estimated_completion, include it even if None to ensure database updates
+                        if key == 'estimated_completion':
+                            supabase_data[key] = value  # Include None values for this field
+                        elif value is not None:
                             if key in ['daily_activity', 'tasks']:
                                 # Ensure these are valid JSON
                                 if isinstance(value, dict):
