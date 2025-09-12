@@ -28,7 +28,23 @@ which python3
 python3 --version
 
 echo "📊 Running Math Academy scraper..."
-# Run the scraper
-python3 scraper_supabase.py
+
+# Check if we're in a headless environment (no display)
+if [ -z "$DISPLAY" ] && [ -z "$WAYLAND_DISPLAY" ]; then
+    echo "🖥️  No display detected - running in headless mode"
+    export HEADLESS=true
+    
+    # Check if xvfb-run is available as a fallback
+    if command -v xvfb-run >/dev/null 2>&1; then
+        echo "🖥️  Using xvfb-run for virtual display"
+        xvfb-run -a python3 scraper_supabase.py
+    else
+        echo "🖥️  Running in pure headless mode"
+        python3 scraper_supabase.py
+    fi
+else
+    echo "🖥️  Display available - running normally"
+    python3 scraper_supabase.py
+fi
 
 echo "✅ Math Academy scraper completed!"
