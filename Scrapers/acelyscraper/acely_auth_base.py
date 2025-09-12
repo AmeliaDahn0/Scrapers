@@ -87,10 +87,10 @@ class AcelyAuthenticator:
                 options.add_argument("--headless")
             
             # Set custom user agent
-            options.add_argument("--user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36")
+            options.add_argument("--user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36")
             
-            # Force Chrome version 138 to match installed Chrome
-            self.driver = uc.Chrome(options=options, version_main=138)
+            # Force Chrome version 140 to match installed Chrome
+            self.driver = uc.Chrome(options=options, version_main=140)
             
             wait_timeout = self.config.wait_timeout if self.config else int(os.getenv("WAIT_TIMEOUT", "10"))
             self.wait = WebDriverWait(self.driver, wait_timeout)
