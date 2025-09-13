@@ -283,7 +283,7 @@ class FilteredMathAcademyStudentScraper:
             return []
             
         async with async_playwright() as p:
-            browser = await p.chromium.launch(headless=True)
+            browser = await p.chromium.launch(headless=False)
             page = await browser.new_page()
             
             try:

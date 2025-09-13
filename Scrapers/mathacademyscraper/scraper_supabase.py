@@ -235,46 +235,76 @@ class MathAcademySupabaseScraper:
                 print(f"    → Found daily XP: {daily_xp_text}")
             
             # 3. Estimated completion date from <div id="estimatedCompletion">
-            # Try multiple times to handle timing issues
-            estimated_completion_found = False
-            for attempt in range(3):
-                if attempt > 0:
-                    print(f"    → Retrying estimated completion extraction (attempt {attempt + 1})")
-                    await page.wait_for_timeout(1000)  # Wait 1 second before retry
-                    content = await page.content()
-                    soup = BeautifulSoup(content, 'html.parser')
-                
-                estimated_completion_element = soup.find('div', id='estimatedCompletion')
-                if estimated_completion_element:
-                    # Extract the date from the span inside the div
-                    span_element = estimated_completion_element.find('span')
-                    if span_element:
-                        estimated_date = span_element.get_text(strip=True)
-                        detailed_data['estimated_completion'] = estimated_date
-                        print(f"    → Found estimated completion: {estimated_date}")
-                        estimated_completion_found = True
-                        break
+            estimated_completion_element = soup.find('div', id='estimatedCompletion')
+            if estimated_completion_element:
+                # Extract the date from the span inside the div
+                span_element = estimated_completion_element.find('span')
+                if span_element:
+                    estimated_date = span_element.get_text(strip=True)
+                    detailed_data['estimated_completion'] = estimated_date
+                    print(f"    → Found estimated completion: {estimated_date}")
+                else:
+                    # Fallback: get all text and extract date
+                    full_text = estimated_completion_element.get_text(strip=True)
+                    detailed_data['estimated_completion'] = full_text
+                    print(f"    → Found estimated completion (full): {full_text}")
+            
+            # 4. Extract detailed daily activity with dates from task table
+            # First, get all date headers to create a date context map
+            date_headers = soup.find_all('td', class_='dateHeader')
+            date_context_map = {}
+            
+            for date_header in date_headers:
+                try:
+                    # Get the raw text from the date header
+                    date_text = date_header.get_text(strip=True)
+                    
+                    # Extract clean date by looking for the date pattern before any XP information
+                    # Format is typically "Day, Month DDth" or "Day, Month DD"
+                    clean_date = None
+                    date_total_xp = "0 XP"
+                    
+                    # Look for pattern like "Fri, Jul 11th" at the beginning
+                    date_match = re.match(r'^([A-Za-z]{3}, [A-Za-z]{3} \d{1,2}(?:st|nd|rd|th)?)', date_text)
+                    if date_match:
+                        clean_date = date_match.group(1)
+                        
+                        # Extract XP total separately from span or remaining text
+                        xp_span = date_header.find('span', class_='dateTotalXP')
+                        if xp_span:
+                            date_total_xp = xp_span.get_text(strip=True)
+                        else:
+                            # Look for XP in the remaining text
+                            remaining_text = date_text[len(clean_date):].strip()
+                            xp_match = re.search(r'(\d+\s*XP)', remaining_text)
+                            if xp_match:
+                                date_total_xp = xp_match.group(1)
                     else:
-                        # Fallback: get all text and extract date
-                        full_text = estimated_completion_element.get_text(strip=True)
-                        detailed_data['estimated_completion'] = full_text
-                        print(f"    → Found estimated completion (full): {full_text}")
-                        estimated_completion_found = True
-                        break
+                        # Fallback: try to extract first 3 words as date
+                        date_parts = date_text.split()
+                        if len(date_parts) >= 3:
+                            clean_date = ' '.join(date_parts[:3])
+                            # Remove any trailing numbers that might be XP values
+                            clean_date = re.sub(r'\d+$', '', clean_date).strip()
+                    
+                    if clean_date:
+                        # Get the parent row to find position in DOM
+                        parent_row = date_header.find_parent('tr')
+                        if parent_row:
+                            date_context_map[parent_row] = {
+                                'date': clean_date,
+                                'total_xp': date_total_xp
+                            }
+                except Exception as e:
+                    continue
             
-            if not estimated_completion_found:
-                print(f"    ✗ No estimatedCompletion element found for {student_name} after 3 attempts")
-                # Set to None explicitly so it gets included in the database update
-                detailed_data['estimated_completion'] = None
-            
-            # 4. Extract detailed daily activity from task table
-            # Look for all task rows: <tr id="task-XXXXX" class="task task" type="Review">
+            # Now extract tasks and associate them with dates
             task_rows = soup.find_all('tr', id=re.compile(r'task-\d+'))
+            daily_activities_by_date = {}
             
             if task_rows:
                 print(f"    → Found {len(task_rows)} task rows")
                 
-                daily_activities = []
                 for task_row in task_rows:
                     try:
                         task_data = {}
@@ -283,6 +313,43 @@ class MathAcademySupabaseScraper:
                         task_id = task_row.get('id', '')
                         if task_id:
                             task_data['task_id'] = task_id
+                        
+                        # Find the closest preceding date header by walking up the DOM
+                        current_date = None
+                        current_element = task_row
+                        
+                        # Look for the nearest date header by checking previous siblings
+                        while current_element:
+                            prev_sibling = current_element.find_previous_sibling('tr')
+                            if prev_sibling and prev_sibling in date_context_map:
+                                current_date = date_context_map[prev_sibling]['date']
+                                date_total_xp = date_context_map[prev_sibling]['total_xp']
+                                break
+                            current_element = prev_sibling
+                        
+                        # If no date found, look for any date header before this task in the document
+                        if not current_date and date_context_map:
+                            # Use the last date header found as fallback
+                            for date_row, date_info in date_context_map.items():
+                                if task_row.sourceline and date_row.sourceline and date_row.sourceline < task_row.sourceline:
+                                    current_date = date_info['date']
+                                    date_total_xp = date_info['total_xp']
+                        
+                        # If still no date, use "Unknown Date"
+                        if not current_date:
+                            current_date = "Unknown Date"
+                            date_total_xp = "0 XP"
+                        
+                        # Initialize date entry if needed
+                        if current_date not in daily_activities_by_date:
+                            daily_activities_by_date[current_date] = {
+                                'date': current_date,
+                                'total_xp': date_total_xp,
+                                'activities': []
+                            }
+                        
+                        # Associate task with date
+                        task_data['date'] = current_date
                         
                         # Extract task type (Review, Lesson, etc.)
                         task_type = task_row.get('type', '')
@@ -294,7 +361,7 @@ class MathAcademySupabaseScraper:
                         if progress:
                             task_data['progress'] = progress
                         
-                        # Extract task name from <div id="taskName-XXXXX" class="taskName">
+                        # Extract task name from <div class="taskName">
                         task_name_div = task_row.find('div', class_='taskName')
                         if task_name_div:
                             task_data['task_name'] = task_name_div.get_text(strip=True)
@@ -319,45 +386,18 @@ class MathAcademySupabaseScraper:
                                     task_data['xp_earned'] = span_text
                                     break
                         
-                        if task_data:  # Only add if we found some data
-                            daily_activities.append(task_data)
+                        # Add to the date's activities
+                        if task_data:
+                            daily_activities_by_date[current_date]['activities'].append(task_data)
                             
                     except Exception as e:
                         continue
                 
-                detailed_data['daily_activity'] = {'tasks': daily_activities}
-                print(f"    → Extracted {len(daily_activities)} task activities")
+                detailed_data['daily_activity'] = daily_activities_by_date
+                total_tasks = sum(len(date_data['activities']) for date_data in daily_activities_by_date.values())
+                print(f"    → Extracted {total_tasks} task activities across {len(daily_activities_by_date)} dates")
             
-            # 5. Extract date-specific XP totals from dateHeader rows
-            date_headers = soup.find_all('td', class_='dateHeader')
-            date_totals = []
-            
-            for date_header in date_headers:
-                try:
-                    date_info = {}
-                    date_text = date_header.get_text(strip=True)
-                    
-                    # Extract date
-                    date_parts = date_text.split()
-                    if len(date_parts) >= 3:
-                        date_info['date'] = ' '.join(date_parts[:3])  # e.g., "Fri, Aug 8th"
-                    
-                    # Extract XP total from span with class dateTotalXP
-                    xp_span = date_header.find('span', class_='dateTotalXP')
-                    if xp_span:
-                        date_info['total_xp'] = xp_span.get_text(strip=True)
-                    
-                    if date_info:
-                        date_totals.append(date_info)
-                        
-                except Exception as e:
-                    continue
-            
-            if date_totals:
-                detailed_data['daily_activity']['date_totals'] = date_totals
-                print(f"    → Extracted {len(date_totals)} daily XP totals")
-            
-            # Extract activity data from various page elements
+            # 5. Extract activity data from various page elements
             # Look for progress bars, charts, and activity summaries
             progress_elements = soup.find_all(['div', 'span', 'td'], class_=re.compile(r'progress|activity|score|xp', re.I))
             for element in progress_elements:
@@ -412,6 +452,20 @@ class MathAcademySupabaseScraper:
                     full_text = estimated_completion_element.get_text(strip=True)
                     detailed_data['estimated_completion'] = full_text
                     print(f"    → Final estimated completion (full): {full_text}")
+            
+            # Re-extract daily XP to prevent table overwriting
+            daily_xp_element = soup.find('td', id='dailyGoalPoints')
+            if daily_xp_element:
+                daily_xp_text = daily_xp_element.get_text(strip=True)
+                detailed_data['daily_xp'] = daily_xp_text
+                print(f"    → Final daily XP: {daily_xp_text}")
+            
+            # Re-extract weekly XP to prevent table overwriting  
+            weekly_xp_element = soup.find('div', id='thisWeekTotalXP')
+            if weekly_xp_element:
+                weekly_xp_text = weekly_xp_element.get_text(strip=True)
+                detailed_data['weekly_xp'] = weekly_xp_text
+                print(f"    → Final weekly XP: {weekly_xp_text}")
             
             # Look for JavaScript data more comprehensively
             scripts = soup.find_all('script')
@@ -621,14 +675,10 @@ class MathAcademySupabaseScraper:
                     # Prepare data for Supabase (remove None values and ensure JSON fields are properly formatted)
                     supabase_data = {}
                     for key, value in student_data.items():
-                        # Skip error field as it's not in the Supabase schema
-                        if key == 'error':
-                            continue
-                        
-                        # For estimated_completion, include it even if None to ensure database updates
-                        if key == 'estimated_completion':
-                            supabase_data[key] = value  # Include None values for this field
-                        elif value is not None:
+                        if value is not None:
+                            # Skip error field as it's not in the Supabase schema
+                            if key == 'error':
+                                continue
                             if key in ['daily_activity', 'tasks']:
                                 # Ensure these are valid JSON
                                 if isinstance(value, dict):
@@ -680,7 +730,7 @@ class MathAcademySupabaseScraper:
             return []
             
         async with async_playwright() as p:
-            browser = await p.chromium.launch(headless=True)
+            browser = await p.chromium.launch(headless=False)
             page = await browser.new_page()
             
             try:

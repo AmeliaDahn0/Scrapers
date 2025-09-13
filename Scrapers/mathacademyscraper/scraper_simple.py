@@ -26,7 +26,7 @@ class MathAcademyScraper:
     async def login_and_scrape(self):
         """Login and scrape the students page"""
         async with async_playwright() as p:
-            browser = await p.chromium.launch(headless=True)
+            browser = await p.chromium.launch(headless=False)
             page = await browser.new_page()
             
             try:
