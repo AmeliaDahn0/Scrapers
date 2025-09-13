@@ -730,7 +730,19 @@ class MathAcademySupabaseScraper:
             return []
             
         async with async_playwright() as p:
-            browser = await p.chromium.launch(headless=False)
+            # Check for headless mode from environment variable or display availability
+            import os
+            headless_mode = (
+                os.getenv('HEADLESS', '').lower() == 'true' or 
+                not os.getenv('DISPLAY') and not os.getenv('WAYLAND_DISPLAY')
+            )
+            
+            if headless_mode:
+                print("🖥️  Running browser in headless mode (no display detected)")
+            else:
+                print("🖥️  Running browser with display")
+                
+            browser = await p.chromium.launch(headless=headless_mode)
             page = await browser.new_page()
             
             try:

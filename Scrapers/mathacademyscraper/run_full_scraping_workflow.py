@@ -52,6 +52,13 @@ class FullScrapingWorkflow:
             
             # Step 2: Run the Math Academy scraper
             print("\n🔍 STEP 2: Running Math Academy scraper...")
+            
+            # Set headless mode if no display is available
+            import os
+            if not os.getenv('DISPLAY') and not os.getenv('WAYLAND_DISPLAY'):
+                os.environ['HEADLESS'] = 'true'
+                print("🖥️  No display detected - enabling headless mode")
+            
             scraper = MathAcademySupabaseScraper()
             scraped_students = await scraper.scrape_to_supabase()
             

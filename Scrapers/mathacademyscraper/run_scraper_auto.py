@@ -6,6 +6,7 @@ Automatically runs the scraping workflow without user input prompts
 
 import asyncio
 import sys
+import os
 from fetch_student_names import StudentNamesFetcher
 from scraper_supabase import MathAcademySupabaseScraper
 
@@ -56,6 +57,12 @@ class AutoScrapingWorkflow:
             
             # Step 2: Run the Math Academy scraper
             print("\n🔍 STEP 2: Running Math Academy scraper...")
+            
+            # Set headless mode if no display is available
+            if not os.getenv('DISPLAY') and not os.getenv('WAYLAND_DISPLAY'):
+                os.environ['HEADLESS'] = 'true'
+                print("🖥️  No display detected - enabling headless mode")
+            
             scraper = MathAcademySupabaseScraper()
             scraped_students = await scraper.scrape_to_supabase()
             
