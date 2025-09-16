@@ -76,7 +76,7 @@ async function testStudentsDatabase() {
       const studentsWithoutEmail = allStudents.filter(s => !s.email);
       if (studentsWithoutEmail.length > 0) {
         console.log(`\n⚠️  Warning: ${studentsWithoutEmail.length} students have no email address and will be skipped:`);
-        studentsWithoutEmail.forEach(s => console.log(`   - ${s.name}`));
+        console.log(`   - ${studentsWithoutEmail.length} students missing email addresses`);
       }
     }
     

@@ -130,14 +130,14 @@ def run_student_clicker():
         
         for i, student_name in enumerate(target_students, 1):
             print(f"\n{'='*60}")
-            print(f"📚 Processing {i}/{len(target_students)}: {student_name}")
+            print(f"📚 Processing student {i}/{len(target_students)}")
             print(f"{'='*60}")
             
             # Find the student in the table
             student_found = find_and_click_student(driver, student_name)
             
             if student_found:
-                print(f"✅ Found and clicked on {student_name}")
+                print(f"✅ Found and clicked on student")
                 found_students.append(student_name)
                 
                 # Collect data from student page
@@ -210,7 +210,7 @@ def run_student_clicker():
                     # Continue anyway - we'll try to find the next student
                 
             else:
-                print(f"❌ Could not find {student_name} in the table")
+                print(f"❌ Could not find student in the table")
                 not_found_students.append(student_name)
                 student_data_collection[student_name] = {
                     'name': student_name,
@@ -226,14 +226,10 @@ def run_student_clicker():
         print(f"   - Not found: {len(not_found_students)}")
         
         if found_students:
-            print(f"\n✅ Successfully processed:")
-            for student in found_students:
-                print(f"   - {student}")
+            print(f"\n✅ Successfully processed: {len(found_students)} students")
         
         if not_found_students:
-            print(f"\n❌ Not found in system:")
-            for student in not_found_students:
-                print(f"   - {student}")
+            print(f"\n❌ Not found in system: {len(not_found_students)} students")
         
         # Save results
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -269,7 +265,7 @@ def run_student_clicker():
 def find_and_click_student(driver, student_name):
     """Find a student in the table and click on them"""
     try:
-        print(f"🔍 Looking for {student_name} in the table...")
+        print(f"🔍 Looking for student in the table...")
         
         # Scroll to top first
         driver.execute_script("window.scrollTo(0, 0);")
@@ -289,7 +285,7 @@ def find_and_click_student(driver, student_name):
                         row_text = row.text.strip()
                         # Check if this row contains the student name
                         if student_name.lower() in row_text.lower():
-                            print(f"✅ Found {student_name} in row: {row_text[:100]}...")
+                            print(f"✅ Found student in row: {row_text[:100]}...")
                             
                             # Scroll the row into view
                             driver.execute_script("arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});", row)
@@ -316,7 +312,7 @@ def find_and_click_student(driver, student_name):
                                     continue
                             
                             if clickable_element:
-                                print(f"🖱️  Clicking on {student_name}...")
+                                print(f"🖱️  Clicking on student...")
                                 
                                 # Use JavaScript click to ensure it works
                                 driver.execute_script("arguments[0].click();", clickable_element)
@@ -353,17 +349,17 @@ def find_and_click_student(driver, student_name):
             except Exception as e:
                 break
         
-        print(f"❌ Could not find {student_name} after scrolling through table")
+        print(f"❌ Could not find student after scrolling through table")
         return False
         
     except Exception as e:
-        print(f"❌ Error searching for {student_name}: {str(e)}")
+        print(f"❌ Error searching for student: {str(e)}")
         return False
 
 def collect_student_data(driver, student_name):
     """Collect minimal essential data from the current student page"""
     try:
-        print(f"📊 Collecting data for {student_name}...")
+        print(f"📊 Collecting data for student...")
         
         # Wait for page to load
         time.sleep(3)
@@ -375,13 +371,13 @@ def collect_student_data(driver, student_name):
         }
         
         # TODO: Add specific data collection here based on your requirements
-        print(f"   ✅ Ready to collect specific metrics for {student_name}")
+        print(f"   ✅ Ready to collect specific metrics for student")
         
-        print(f"✅ Data collection complete for {student_name}")
+        print(f"✅ Data collection complete for student")
         return data
         
     except Exception as e:
-        print(f"❌ Error collecting data for {student_name}: {str(e)}")
+        print(f"❌ Error collecting data for student: {str(e)}")
         return {
             'name': student_name,
             'error': str(e),

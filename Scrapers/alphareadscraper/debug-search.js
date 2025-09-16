@@ -206,7 +206,7 @@ async function debugSearch() {
           ];
           
           for (const testEmail of testEmails) {
-            console.log(`🧪 Testing search with: ${testEmail}`);
+            console.log(`🧪 Testing search with student email`);
             
             await searchInput.click();
             await searchInput.fill('');
@@ -215,8 +215,8 @@ async function debugSearch() {
             await page.waitForTimeout(3000); // Wait for results
             
             // Take screenshot after search
-            await page.screenshot({ path: `debug-search-${testEmail.replace(/[^a-zA-Z0-9]/g, '_')}.png`, fullPage: true });
-            console.log(`📸 Screenshot saved: debug-search-${testEmail.replace(/[^a-zA-Z0-9]/g, '_')}.png`);
+            await page.screenshot({ path: `debug-search-student.png`, fullPage: true });
+            console.log(`📸 Screenshot saved: debug-search-student.png`);
             
             // Check if results changed
             const resultsFound = await page.evaluate((email) => {
@@ -237,17 +237,17 @@ async function debugSearch() {
               };
             }, testEmail);
             
-            console.log(`📊 Search results for ${testEmail}:`);
+            console.log(`📊 Search results for student:`);
             console.log(`  - Email found in page: ${resultsFound.hasEmail}`);
             console.log(`  - Details buttons visible: ${resultsFound.detailsButtonCount}`);
             console.log(`  - Total table rows: ${resultsFound.totalTableRows}`);
             console.log(`  - First table row: ${resultsFound.firstTableRow}`);
             
             if (resultsFound.hasEmail && resultsFound.detailsButtonCount > 0) {
-              console.log(`✅ Search found student: ${testEmail}`);
+              console.log(`✅ Search found student`);
               searchWorked = true;
             } else {
-              console.log(`❌ Student not found: ${testEmail}`);
+              console.log(`❌ Student not found`);
             }
             
             // Clear search to reset

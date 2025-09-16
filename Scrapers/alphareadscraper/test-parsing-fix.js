@@ -25,7 +25,7 @@ async function testParsingFix() {
       const sloka = results[0];
       console.log('\n📊 PARSING TEST RESULTS:');
       console.log('========================');
-      console.log(`Email: ${sloka.email}`);
+      console.log(`Test student configured`);
       console.log(`Last Active (parsed): ${sloka.profile?.lastActive}`);
       console.log(`Grade Level: ${sloka.profile?.gradeLevel}`);
       console.log(`Reading Level: ${sloka.profile?.readingLevel}`);
@@ -80,7 +80,7 @@ async function testExistingData() {
     if (sloka) {
       console.log('\n📊 EXISTING DATA ANALYSIS:');
       console.log('==========================');
-      console.log(`Email: ${sloka.email}`);
+      console.log(`Test student configured`);
       console.log(`Last Active (existing): ${sloka.profile?.lastActive}`);
       console.log(`Scraped At: ${sloka.scrapedAt}`);
       

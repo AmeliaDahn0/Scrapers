@@ -162,10 +162,10 @@ class StudentsManager {
             
             if (existingIndex >= 0) {
                 config.students[existingIndex] = { name, enabled, notes };
-                console.log(`Updated existing student: ${name}`);
+                console.log(`Updated existing student`);
             } else {
                 config.students.push({ name, enabled, notes });
-                console.log(`Added new student: ${name}`);
+                console.log(`Added new student`);
             }
 
             config.scraping_config.last_updated = new Date().toISOString().split('T')[0];
@@ -252,7 +252,7 @@ Student Name 2
             config.students.forEach((student, index) => {
                 const status = student.enabled ? '✅ ENABLED' : '❌ DISABLED';
                 const notes = student.notes ? ` (${student.notes})` : '';
-                console.log(`  ${index + 1}. ${student.name} - ${status}${notes}`);
+                console.log(`  ${index + 1}. Student ${index + 1} - ${status}${notes}`);
             });
             
             const enabledCount = config.students.filter(s => s.enabled).length;
@@ -265,7 +265,7 @@ Student Name 2
             if (txtStudents.length > 0) {
                 console.log('Students from students.txt:');
                 txtStudents.forEach((name, index) => {
-                    console.log(`  ${index + 1}. ${name}`);
+                    console.log(`  ${index + 1}. Student ${index + 1}`);
                 });
                 console.log(`\\nTotal: ${txtStudents.length} students`);
             } else {

@@ -35,7 +35,7 @@ async function uploadToSupabase(studentData) {
       const parsedDate = new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T${hour.padStart(2, '0')}:${minute.padStart(2, '0')}:${second.padStart(2, '0')}.000Z`);
       scrapedAtISO = parsedDate.toISOString();
     } catch (dateError) {
-      console.log(`⚠️  Date parsing error for ${studentData.email}, using current time:`, dateError.message || 'Unknown date error');
+      console.log(`⚠️  Date parsing error for student, using current time:`, dateError.message || 'Unknown date error');
       scrapedAtISO = new Date().toISOString();
     }
     
@@ -56,7 +56,7 @@ async function uploadToSupabase(studentData) {
       current_course: studentData.profile?.currentCourse
     };
 
-    console.log(`🔄 Testing upload for ${studentData.email}...`);
+    console.log(`🔄 Testing upload for student...`);
     console.log('📋 Record to upload:', JSON.stringify(dbRecord, null, 2));
 
     const { data, error } = await supabase
@@ -68,17 +68,17 @@ async function uploadToSupabase(studentData) {
 
     if (error) {
       const errorMsg = error.message || error.details || JSON.stringify(error) || 'Unknown database error';
-      console.log(`❌ Database upload error for ${studentData.email}:`, errorMsg);
+      console.log(`❌ Database upload error for student:`, errorMsg);
       return { success: false, error: errorMsg };
     }
 
-    console.log(`✅ Successfully uploaded ${studentData.email} to database`);
+    console.log(`✅ Successfully uploaded student to database`);
     console.log('📊 Response data:', data);
     return { success: true, data };
 
   } catch (error) {
     const errorMsg = error.message || error.toString() || 'Unknown upload error';
-    console.log(`💥 Database upload failed for ${studentData.email}:`, errorMsg);
+    console.log(`💥 Database upload failed for student:`, errorMsg);
     return { success: false, error: errorMsg };
   }
 }
@@ -103,7 +103,7 @@ async function testUpload() {
       return;
     }
     
-    console.log(`🧪 Testing upload with first student: ${students[0].email}`);
+    console.log(`🧪 Testing upload with first student`);
     
     const result = await uploadToSupabase(students[0]);
     

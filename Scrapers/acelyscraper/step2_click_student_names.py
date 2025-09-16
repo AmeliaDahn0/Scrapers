@@ -32,9 +32,7 @@ class Step2ClickStudentNames(AcelyAuthenticator):
                         emails.append(line.lower())  # Store in lowercase for comparison
                 
                 self.target_emails = emails
-                logger.info(f"📧 Loaded {len(self.target_emails)} target student emails:")
-                for email in self.target_emails:
-                    logger.info(f"  - {email}")
+                logger.info(f"📧 Loaded {len(self.target_emails)} target student emails")
                 
                 return True
                 
@@ -187,7 +185,7 @@ class Step2ClickStudentNames(AcelyAuthenticator):
             
             for email_index, target_email in enumerate(self.target_emails):
                 logger.info(f"\n{'='*60}")
-                logger.info(f"📧 Processing student {email_index + 1}/{len(self.target_emails)}: {target_email}")
+                logger.info(f"📧 Processing student {email_index + 1}/{len(self.target_emails)}")
                 logger.info(f"{'='*60}")
                 
                 # Find this specific student on the current page
@@ -198,10 +196,10 @@ class Step2ClickStudentNames(AcelyAuthenticator):
                     if email_index < len(self.target_emails) - 1:  # Don't navigate back after the last student
                         logger.info("🔄 Preparing for next student...")
                         if not self.navigate_back_to_student_list():
-                            logger.error(f"❌ Failed to navigate back to student list after {target_email}")
+                            logger.error(f"❌ Failed to navigate back to student list after student {email_index + 1}")
                             break
                 else:
-                    logger.warning(f"⚠️ Student {target_email} not found on current page")
+                    logger.warning(f"⚠️ Student {email_index + 1} not found on current page")
                     self.not_found_students.append(target_email)
             
             # Final summary
@@ -211,14 +209,10 @@ class Step2ClickStudentNames(AcelyAuthenticator):
             logger.info(f"  Not found: {len(self.not_found_students)} students")
             
             if self.clicked_students:
-                logger.info("✅ Successfully processed students:")
-                for student in self.clicked_students:
-                    logger.info(f"  - {student['name']} ({student['email']})")
+                logger.info("✅ Successfully processed students")
             
             if self.not_found_students:
-                logger.info("❌ Students not found on page:")
-                for email in self.not_found_students:
-                    logger.info(f"  - {email}")
+                logger.info(f"❌ {len(self.not_found_students)} students not found on page")
             
             return True
             
@@ -262,7 +256,7 @@ class Step2ClickStudentNames(AcelyAuthenticator):
                     
                     # Check if this is our target student
                     if student_email == target_email:
-                        logger.info(f"✅ Found target student: {student_email}")
+                        logger.info(f"✅ Found target student")
                         
                         # Look for the name link in this row
                         name_links = row.find_elements(By.XPATH, ".//a[contains(@class, 'link') and contains(@href, '/student-dashboard/')]")
@@ -277,10 +271,10 @@ class Step2ClickStudentNames(AcelyAuthenticator):
                             name_link = name_links[0]
                             student_name = name_link.text.strip()
                             
-                            logger.info(f"🎯 Found name link for {student_name} ({student_email})")
+                            logger.info(f"🎯 Found name link for student")
                             
                             # Click the student name link
-                            logger.info(f"🖱️ Clicking on {student_name}...")
+                            logger.info(f"🖱️ Clicking on student name...")
                             self.driver.execute_script("arguments[0].scrollIntoView(true);", name_link)
                             time.sleep(1)
                             name_link.click()
@@ -289,7 +283,7 @@ class Step2ClickStudentNames(AcelyAuthenticator):
                             # Verify navigation to student dashboard
                             current_url = self.driver.current_url
                             if '/student-dashboard/' in current_url:
-                                logger.info(f"✅ Successfully navigated to {student_name}'s dashboard: {current_url}")
+                                logger.info(f"✅ Successfully navigated to student dashboard")
                                 
                                 self.clicked_students.append({
                                     'name': student_name,
@@ -299,10 +293,10 @@ class Step2ClickStudentNames(AcelyAuthenticator):
                                 
                                 return True
                             else:
-                                logger.warning(f"⚠️ Unexpected URL after clicking {student_name}: {current_url}")
+                                logger.warning(f"⚠️ Unexpected URL after clicking student name")
                                 return False
                         else:
-                            logger.warning(f"⚠️ Could not find name link for {student_email}")
+                            logger.warning(f"⚠️ Could not find name link for student")
                             return False
                     
                 except Exception as e:

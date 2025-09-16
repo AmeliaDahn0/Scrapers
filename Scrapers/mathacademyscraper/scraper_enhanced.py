@@ -180,7 +180,7 @@ class MathAcademyStudentScraper:
                 students.append(student_data)
                 
             except Exception as e:
-                print(f"Error extracting data for student link {link}: {e}")
+                print(f"Error extracting data for student: {e}")
                 continue
         
         return students
@@ -275,7 +275,7 @@ async def main():
         if students:
             print(f"\nSample student data:")
             for i, student in enumerate(students[:3]):  # Show first 3 students
-                print(f"{i+1}. {student}")
+                print(f"{i+1}. Student {i+1} data extracted")
         
         return students
         

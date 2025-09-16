@@ -51,8 +51,8 @@ class FilteredMathAcademyStudentScraper:
                         target_names.append(line.lower())  # Convert to lowercase for case-insensitive matching
             
             print(f"Loaded {len(target_names)} target student names from {self.names_file}")
-            for name in target_names:
-                print(f"  - {name}")
+        for i, name in enumerate(target_names, 1):
+            print(f"  - Target student {i}")
             
         except Exception as e:
             print(f"Error loading names file: {e}")
@@ -190,7 +190,7 @@ class FilteredMathAcademyStudentScraper:
                     skipped_count += 1
                     continue
                 
-                print(f"✓ Extracting data for: {student_name}")
+                    print(f"✓ Extracting data for target student")
                 found_students.append(student_name)
                 
                 student_data = {}
@@ -244,7 +244,7 @@ class FilteredMathAcademyStudentScraper:
                 students.append(student_data)
                 
             except Exception as e:
-                print(f"Error extracting data for student link {link}: {e}")
+                print(f"Error extracting data for student: {e}")
                 continue
         
         print(f"\n=== FILTERING RESULTS ===")
@@ -253,9 +253,7 @@ class FilteredMathAcademyStudentScraper:
         print(f"Students skipped: {skipped_count}")
         
         if found_students:
-            print(f"\nFound students:")
-            for name in found_students:
-                print(f"  ✓ {name}")
+            print(f"\nFound students: {len(found_students)} students")
         
         # Check for any target names that weren't found
         found_names_lower = [name.lower() for name in found_students]
@@ -270,9 +268,7 @@ class FilteredMathAcademyStudentScraper:
                 missing_names.append(target)
         
         if missing_names:
-            print(f"\nTarget names NOT found:")
-            for name in missing_names:
-                print(f"  ✗ {name}")
+            print(f"\nTarget names NOT found: {len(missing_names)} students")
         
         return students
 
@@ -352,7 +348,7 @@ async def main():
         if students:
             print(f"\nFiltered student data:")
             for i, student in enumerate(students):
-                print(f"{i+1}. {student.get('name', 'Unknown')} (ID: {student.get('student_id', 'N/A')})")
+                print(f"{i+1}. Student {i+1} (ID: {student.get('student_id', 'N/A')})")
                 if 'course' in student:
                     print(f"    Course: {student['course']}")
                 if 'progress_percentage' in student:

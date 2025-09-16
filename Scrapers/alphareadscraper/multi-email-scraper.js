@@ -76,7 +76,7 @@ async function uploadToSupabase(studentData) {
       const parsedDate = new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T${hour.padStart(2, '0')}:${minute.padStart(2, '0')}:${second.padStart(2, '0')}.000Z`);
       scrapedAtISO = parsedDate.toISOString();
     } catch (dateError) {
-      console.log(`⚠️  Date parsing error for ${studentData.email}, using current time:`, dateError.message || 'Unknown date error');
+      console.log(`⚠️  Date parsing error for student, using current time:`, dateError.message || 'Unknown date error');
       scrapedAtISO = new Date().toISOString();
     }
     
@@ -97,7 +97,7 @@ async function uploadToSupabase(studentData) {
       current_course: studentData.profile?.currentCourse
     };
 
-    console.log(`🔄 Uploading ${studentData.email} to table ${tableName}...`);
+    console.log(`🔄 Uploading student to table ${tableName}...`);
 
     const { data, error } = await supabase
       .from(tableName)
@@ -108,16 +108,16 @@ async function uploadToSupabase(studentData) {
 
     if (error) {
       const errorMsg = error.message || error.details || JSON.stringify(error) || 'Unknown database error';
-      console.log(`❌ Database upload error for ${studentData.email}:`, errorMsg);
+      console.log(`❌ Database upload error for student:`, errorMsg);
       return { success: false, error: errorMsg };
     }
 
-    console.log(`✅ Successfully uploaded ${studentData.email} to database`);
+      console.log(`✅ Successfully uploaded student to database`);
     return { success: true, data };
 
   } catch (error) {
     const errorMsg = error.message || error.toString() || 'Unknown upload error';
-    console.log(`💥 Database upload failed for ${studentData.email}:`, errorMsg);
+    console.log(`💥 Database upload failed for student:`, errorMsg);
     return { success: false, error: errorMsg };
   }
 }
@@ -139,7 +139,7 @@ async function uploadBatchToSupabase(studentsArray) {
 
   for (const student of studentsArray) {
     if (student.error) {
-      console.log(`⏭️  Skipping ${student.email} - contains error data`);
+      console.log(`⏭️  Skipping student - contains error data`);
       continue;
     }
 
@@ -165,7 +165,7 @@ async function uploadBatchToSupabase(studentsArray) {
   if (uploadResults.errors.length > 0) {
     console.log(`\n❌ Upload errors:`);
     uploadResults.errors.forEach(err => {
-      console.log(`   - ${err.email}: ${err.error}`);
+      console.log(`   - Student: ${err.error}`);
     });
   }
 
@@ -290,7 +290,7 @@ async function getTargetEmails() {
 
 // Function to extract comprehensive data from student detail page
 async function extractStudentDetailData(page, studentEmail, rowData) {
-  console.log(`📋 Extracting data for: ${studentEmail}`);
+  console.log(`📋 Extracting data for student`);
   
   try {
     // Wait for detail page to fully load
@@ -601,12 +601,12 @@ async function extractStudentDetailData(page, studentEmail, rowData) {
     //   fullPage: true 
     // });
     
-    console.log(`⚡ Data extracted for ${studentEmail} (no screenshot)`);
+    console.log(`⚡ Data extracted for student (no screenshot)`);
     
     return studentData;
     
   } catch (error) {
-    console.log(`❌ Error extracting data for ${studentEmail}:`, error.message);
+    console.log(`❌ Error extracting data for student:`, error.message);
     return {
       email: studentEmail,
       error: error.message,
@@ -782,7 +782,7 @@ async function scrapeMultipleStudents() {
     let studentsProcessed = 0;
     
     for (const targetEmail of targetEmails) {
-      console.log(`\n🔍 Searching for: ${targetEmail.email} (${studentsProcessed + 1}/${targetEmails.length})`);
+      console.log(`\n🔍 Searching for student (${studentsProcessed + 1}/${targetEmails.length})`);
       
       try {
         // Go to student management page for fresh search
@@ -924,7 +924,7 @@ async function scrapeMultipleStudents() {
               }, targetEmail.email);
               
               // Debug logging
-              console.log(`📊 Search results for ${targetEmail.email}:`);
+              console.log(`📊 Search results for student:`);
               console.log(`  - Email found in page: ${studentFound.debug.hasEmailInPage}`);
               console.log(`  - Details buttons visible: ${studentFound.debug.detailsButtonCount}`);
               console.log(`  - Table rows: ${studentFound.debug.tableRowCount}`);
@@ -934,12 +934,12 @@ async function scrapeMultipleStudents() {
               }
               
               if (studentFound.found) {
-                console.log(`✅ Found student: ${targetEmail.email}`);
+                console.log(`✅ Found target student`);
                 searchWorked = true;
                 
                 // IMMEDIATELY SCRAPE THE STUDENT DATA
                 try {
-                  console.log(`🔗 Going to Details page for: ${targetEmail.email}`);
+                  console.log(`🔗 Going to Details page for student`);
                   await page.goto(studentFound.detailsHref);
                   await page.waitForTimeout(3000);
                   
@@ -972,11 +972,11 @@ async function scrapeMultipleStudents() {
                   results.push(organizedStudentData);
                   studentsProcessed++;
                   
-                  console.log(`📋 Successfully scraped data for: ${targetEmail.email}`);
+                  console.log(`📋 Successfully scraped data for student`);
                   console.log(`📊 Progress: ${studentsProcessed} students processed so far`);
                   
                 } catch (scrapingError) {
-                  console.log(`❌ Error scraping ${targetEmail.email}:`, scrapingError.message);
+                  console.log(`❌ Error scraping student:`, scrapingError.message);
                   results.push({
                     email: targetEmail.email,
                     error: scrapingError.message,
@@ -1013,11 +1013,11 @@ async function scrapeMultipleStudents() {
         } // End of selector loop
         
         if (!searchWorked) {
-          console.log(`❌ Student not found with any search method: ${targetEmail.email}`);
+          console.log(`❌ Student not found with any search method`);
         }
         
       } catch (error) {
-        console.log(`❌ Error searching for ${targetEmail.email}:`, error.message);
+        console.log(`❌ Error searching for student:`, error.message);
       }
     }
     

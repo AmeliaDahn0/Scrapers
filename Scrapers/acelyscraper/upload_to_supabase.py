@@ -81,7 +81,7 @@ def upload_student_data(supabase: Client, student_records: list) -> int:
                 ).execute()
                 
                 if result.data:
-                    logger.info(f"✅ Uploaded/updated data for {record['name']} ({record['email']})")
+                    logger.info(f"✅ Uploaded/updated data for student")
                     uploaded_count += 1
                 else:
                     logger.warning(f"⚠️ No data returned for {record['name']}")
@@ -149,7 +149,7 @@ def main():
                 transformed = transform_student_data(student_data)
                 transformed_records.append(transformed)
             except Exception as e:
-                logger.error(f"❌ Failed to transform data for {email}: {e}")
+                logger.error(f"❌ Failed to transform data for student: {e}")
                 continue
         
         if not transformed_records:
@@ -162,9 +162,7 @@ def main():
         logger.info(f"✅ Successfully uploaded {uploaded_count}/{len(transformed_records)} student records")
         
         # Summary
-        logger.info("📋 Upload Summary:")
-        for record in transformed_records:
-            logger.info(f"  - {record['name']} ({record['email']})")
+        logger.info(f"📋 Upload Summary: {len(transformed_records)} students processed")
         
     except Exception as e:
         logger.error(f"❌ Upload process failed: {e}")

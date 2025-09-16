@@ -63,9 +63,7 @@ class Step3ExtractData(AcelyAuthenticator):
                     unique_emails.append(email)
             
             self.target_emails = unique_emails
-            logger.info(f"📧 Loaded {len(self.target_emails)} target student emails from Supabase:")
-            for email in self.target_emails:
-                logger.info(f"  - {email}")
+            logger.info(f"📧 Loaded {len(self.target_emails)} target student emails from Supabase")
             
             return True
                 
@@ -76,7 +74,7 @@ class Step3ExtractData(AcelyAuthenticator):
     def extract_student_data(self, student_email, student_name):
         """Extract data from the current student dashboard page"""
         try:
-            logger.info(f"📊 Extracting data for {student_name} ({student_email})")
+            logger.info(f"📊 Extracting data for student")
             
             # Initialize student data structure
             student_data = {
@@ -1270,7 +1268,7 @@ class Step3ExtractData(AcelyAuthenticator):
     def find_and_extract_student_data(self, target_email):
         """Find a student and extract their data"""
         try:
-            logger.info(f"🔍 Looking for student: {target_email}")
+            logger.info(f"🔍 Looking for student")
             
             # Look for the student table rows
             student_rows = self.driver.find_elements(By.XPATH, "//tr[contains(@class, 'border-b')]")
@@ -1301,7 +1299,7 @@ class Step3ExtractData(AcelyAuthenticator):
                     
                     # Check if this is our target student
                     if student_email == target_email:
-                        logger.info(f"✅ Found target student: {student_email}")
+                        logger.info(f"✅ Found target student")
                         
                         # Look for the name link in this row
                         name_links = row.find_elements(By.XPATH, ".//a[contains(@class, 'link') and contains(@href, '/student-dashboard/')]")
@@ -1316,10 +1314,10 @@ class Step3ExtractData(AcelyAuthenticator):
                             name_link = name_links[0]
                             student_name = name_link.text.strip()
                             
-                            logger.info(f"🎯 Found name link for {student_name} ({student_email})")
+                            logger.info(f"🎯 Found name link for student")
                             
                             # Click the student name link
-                            logger.info(f"🖱️ Clicking on {student_name}...")
+                            logger.info(f"🖱️ Clicking on student name...")
                             self.driver.execute_script("arguments[0].scrollIntoView(true);", name_link)
                             time.sleep(1)
                             name_link.click()
@@ -1328,7 +1326,7 @@ class Step3ExtractData(AcelyAuthenticator):
                             # Verify navigation to student dashboard
                             current_url = self.driver.current_url
                             if '/student-dashboard/' in current_url:
-                                logger.info(f"✅ Successfully navigated to {student_name}'s dashboard")
+                                logger.info(f"✅ Successfully navigated to student dashboard")
                                 
                                 # Extract data from the dashboard
                                 student_data = self.extract_student_data(student_email, student_name)
@@ -1345,11 +1343,11 @@ class Step3ExtractData(AcelyAuthenticator):
                     continue
             
             # Student not found on this page
-            logger.warning(f"⚠️ Student {target_email} not found on current page")
+                logger.warning(f"⚠️ Student not found on current page")
             return None
             
         except Exception as e:
-            logger.error(f"❌ Failed to find student {target_email}: {e}")
+            logger.error(f"❌ Failed to find student: {e}")
             return None
 
     def upload_individual_to_supabase(self, email, student_data):
@@ -1383,7 +1381,7 @@ class Step3ExtractData(AcelyAuthenticator):
             result = supabase.table("acely_students").insert(transformed).execute()
             
             if result.data:
-                logger.info(f"☁️ Uploaded to Supabase: {transformed['name']} ({transformed['email']})")
+                logger.info(f"☁️ Uploaded to Supabase")
                 return True
             else:
                 logger.warning(f"⚠️ No data returned from Supabase for {transformed['name']}")
@@ -1470,7 +1468,7 @@ class Step3ExtractData(AcelyAuthenticator):
             
             for email_index, target_email in enumerate(self.target_emails):
                 logger.info(f"\n{'='*60}")
-                logger.info(f"📧 Processing student {email_index + 1}/{len(self.target_emails)}: {target_email}")
+                logger.info(f"📧 Processing student {email_index + 1}/{len(self.target_emails)}")
                 logger.info(f"{'='*60}")
                 
                 # Find and extract data for this student
@@ -1479,7 +1477,7 @@ class Step3ExtractData(AcelyAuthenticator):
                 if student_data:
                     # Store the extracted data
                     self.student_data[target_email] = student_data
-                    logger.info(f"✅ Data extracted for {target_email}")
+                    logger.info(f"✅ Data extracted for student {email_index + 1}")
                     
                     # Upload to Supabase immediately
                     self.upload_individual_to_supabase(target_email, student_data)
@@ -1488,10 +1486,10 @@ class Step3ExtractData(AcelyAuthenticator):
                     if email_index < len(self.target_emails) - 1:  # Don't navigate back after the last student
                         logger.info("🔄 Preparing for next student...")
                         if not self.navigate_back_to_student_list():
-                            logger.error(f"❌ Failed to navigate back to student list after {target_email}")
+                            logger.error(f"❌ Failed to navigate back to student list after student {email_index + 1}")
                             break
                 else:
-                    logger.warning(f"⚠️ Student {target_email} not found or data extraction failed")
+                    logger.warning(f"⚠️ Student {email_index + 1} not found or data extraction failed")
                     self.not_found_students.append(target_email)
             
             # Save final combined data to JSON file
@@ -1508,14 +1506,10 @@ class Step3ExtractData(AcelyAuthenticator):
             logger.info(f"  Not found/failed: {len(self.not_found_students)} students")
             
             if self.student_data:
-                logger.info("✅ Successfully processed students:")
-                for email, data in self.student_data.items():
-                    logger.info(f"  - {data.get('name', 'Unknown')} ({email})")
+                logger.info("✅ Successfully processed students")
             
             if self.not_found_students:
-                logger.info("❌ Students not found on page:")
-                for email in self.not_found_students:
-                    logger.info(f"  - {email}")
+                logger.info(f"❌ {len(self.not_found_students)} students not found on page")
             
             return True
             
@@ -1571,7 +1565,7 @@ class Step3ExtractData(AcelyAuthenticator):
                     result = supabase.table("acely_students").insert(transformed).execute()
                     
                     if result.data:
-                        logger.info(f"✅ Inserted new record for {transformed['name']} ({transformed['email']})")
+                        logger.info(f"✅ Inserted new record for student")
                         uploaded_count += 1
                     else:
                         logger.warning(f"⚠️ No data returned for {transformed['name']}")

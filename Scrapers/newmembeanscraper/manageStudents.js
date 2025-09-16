@@ -45,7 +45,7 @@ function addStudent(name, notes = '') {
     }
     
     studentsManager.addStudent(name, true, notes);
-    console.log(`✅ Added student: ${name}`);
+        console.log(`✅ Added student`);
     if (notes) {
         console.log(`   Notes: ${notes}`);
     }
@@ -59,7 +59,7 @@ function toggleStudent(name, enabled) {
     
     const action = enabled ? 'enable' : 'disable';
     studentsManager.addStudent(name, enabled, '');
-    console.log(`${enabled ? '✅' : '❌'} ${enabled ? 'Enabled' : 'Disabled'} student: ${name}`);
+        console.log(`${enabled ? '✅' : '❌'} ${enabled ? 'Enabled' : 'Disabled'} student`);
 }
 
 // Main command processing

@@ -25,7 +25,7 @@ def collect_student_data():
         found_students = ["Ananya Peesu", "Geetesh Parelly", "Sloka Vudumu"]
         
         print("🚀 Starting data collection for found students")
-        print(f"📚 Students to process: {found_students}")
+        print(f"📚 Students to process: {len(found_students)} students")
         
         # Setup browser
         chrome_options = Options()
@@ -64,7 +64,7 @@ def collect_student_data():
         # Process each student
         for i, student_name in enumerate(found_students, 1):
             print(f"\n{'='*50}")
-            print(f"📚 Processing {i}/{len(found_students)}: {student_name}")
+            print(f"📚 Processing student {i}/{len(found_students)}")
             print(f"{'='*50}")
             
             # Find and click the student
@@ -124,7 +124,7 @@ def collect_student_data():
 def find_and_click_student(driver, student_name):
     """Find and click on a specific student"""
     try:
-        print(f"🔍 Looking for {student_name}...")
+        print(f"🔍 Looking for student...")
         
         # Scroll to top first
         driver.execute_script("window.scrollTo(0, 0);")
@@ -140,7 +140,7 @@ def find_and_click_student(driver, student_name):
                 try:
                     row_text = row.text.strip()
                     if student_name.lower() in row_text.lower():
-                        print(f"✅ Found {student_name} in table!")
+                        print(f"✅ Found target student in table!")
                         
                         # Scroll row into view
                         driver.execute_script("arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});", row)
@@ -157,11 +157,11 @@ def find_and_click_student(driver, student_name):
                             except:
                                 clickable = row
                         
-                        print(f"🖱️  Clicking on {student_name}...")
+                        print(f"🖱️  Clicking on student...")
                         driver.execute_script("arguments[0].click();", clickable)
                         time.sleep(5)  # Wait for page to load
                         
-                        print(f"✅ Successfully clicked {student_name}")
+                        print(f"✅ Successfully clicked student")
                         return True
                         
                 except:
@@ -171,17 +171,17 @@ def find_and_click_student(driver, student_name):
             driver.execute_script("window.scrollBy(0, 300);")
             time.sleep(1)
         
-        print(f"❌ Could not find clickable element for {student_name}")
+            print(f"❌ Could not find clickable element for student")
         return False
         
     except Exception as e:
-        print(f"❌ Error finding {student_name}: {str(e)}")
+        print(f"❌ Error finding student: {str(e)}")
         return False
 
 def scrape_student_page(driver, student_name):
     """Scrape data from the current student page"""
     try:
-        print(f"📊 Collecting data for {student_name}...")
+        print(f"📊 Collecting data for student...")
         
         # Wait for page to load
         time.sleep(3)
@@ -233,11 +233,11 @@ def scrape_student_page(driver, student_name):
         except:
             pass
         
-        print(f"✅ Data collection complete for {student_name}")
+        print(f"✅ Data collection complete for student")
         return data
         
     except Exception as e:
-        print(f"❌ Error collecting data for {student_name}: {str(e)}")
+        print(f"❌ Error collecting data for student: {str(e)}")
         return {
             'name': student_name,
             'status': 'failed',

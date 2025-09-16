@@ -106,7 +106,7 @@ async function debugAvailableStudents() {
     if (studentsData.students.length > 0) {
       console.log('\n👥 First 10 students in your account:');
       studentsData.students.slice(0, 10).forEach((student, index) => {
-        console.log(`${index + 1}. ${student.email} (Grade: ${student.grade}, Course: ${student.currentCourse})`);
+        console.log(`${index + 1}. Student ${index + 1} (Grade: ${student.grade}, Course: ${student.currentCourse})`);
       });
       
       if (studentsData.students.length > 10) {
@@ -121,10 +121,10 @@ async function debugAvailableStudents() {
       );
       
       if (foundStudent) {
-        console.log(`\n✅ Found your target student: ${foundStudent.email}`);
-        console.log(`   Details: Grade ${foundStudent.grade}, Course: ${foundStudent.currentCourse}`);
+      console.log(`\n✅ Found your target student`);
+      console.log(`   Details: Grade ${foundStudent.grade}, Course: ${foundStudent.currentCourse}`);
       } else {
-        console.log(`\n❌ Target student "${targetEmail}" not found in this page`);
+        console.log(`\n❌ Target student not found in this page`);
         console.log('\n🔍 Similar emails found:');
         const similarEmails = studentsData.students.filter(student => 
           student.email.includes('keyen') || 
@@ -133,7 +133,7 @@ async function debugAvailableStudents() {
         );
         
         if (similarEmails.length > 0) {
-          similarEmails.forEach(student => console.log(`   - ${student.email}`));
+          console.log(`   - Found ${similarEmails.length} students with similar details`);
         } else {
           console.log('   - No similar emails found');
         }

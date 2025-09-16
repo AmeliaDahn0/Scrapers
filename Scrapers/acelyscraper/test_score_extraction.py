@@ -85,14 +85,13 @@ def test_score_extraction():
             time.sleep(3)
         
         # Find and extract data for the test student
-        print(f"🔍 Looking for student: {test_email}")
+        print(f"🔍 Looking for test student")
         student_data = scraper.find_and_extract_student_data(test_email)
         
         if student_data:
             print("✅ Student data extracted successfully!")
             print("📊 Extracted data:")
-            print(f"  - Name: {student_data.get('name')}")
-            print(f"  - Email: {student_data.get('email')}")
+        print(f"  - Student data extracted successfully")
             
             extracted_data = student_data.get('data_extracted', {})
             if 'join_date' in extracted_data:

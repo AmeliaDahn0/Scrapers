@@ -239,7 +239,7 @@ class MembeanScraper {
     }
 
     async clickStudentByName(studentName) {
-        console.log(`Looking for student: ${studentName}`);
+        console.log(`Looking for student`);
         
         // Quick click without waiting for full navigation
         const studentFound = await this.page.evaluate((name) => {
@@ -257,18 +257,18 @@ class MembeanScraper {
         }, studentName);
 
         if (studentFound) {
-            console.log(`✓ Clicked student: ${studentName}`);
+            console.log(`✓ Clicked student`);
             // Just wait a short time for the page to start loading
             await this.page.waitForTimeout(1500);
             return true;
         } else {
-            console.log(`✗ Could not find student: ${studentName}`);
+            console.log(`✗ Could not find student`);
             return false;
         }
     }
 
     async scrapeStudentData(studentName) {
-        console.log(`📊 Collecting data for: ${studentName}`);
+        console.log(`📊 Collecting data for student`);
         
         // Wait a bit for the page to load
         await this.page.waitForTimeout(1000);
@@ -322,9 +322,9 @@ class MembeanScraper {
                 path: `student-${studentName.replace(/[^a-zA-Z0-9]/g, '_')}-screenshot.png`,
                 fullPage: false
             });
-            console.log(`✓ Data collected for: ${studentName} (${studentData.recentTraining ? studentData.recentTraining.length : 0} sessions)`);
+            console.log(`✓ Data collected for student (${studentData.recentTraining ? studentData.recentTraining.length : 0} sessions)`);
         } catch (error) {
-            console.log(`✗ Screenshot failed for: ${studentName}`);
+            console.log(`✗ Screenshot failed for student`);
         }
 
         return studentData;
@@ -354,7 +354,7 @@ class MembeanScraper {
             return { students: [], message: 'No students to scrape' };
         }
 
-        console.log(`Found ${studentsToScrape.length} students to scrape:`, studentsToScrape);
+        console.log(`Found ${studentsToScrape.length} students to scrape`);
 
         // Navigate to the class first
         await this.navigateToClass();
@@ -367,7 +367,7 @@ class MembeanScraper {
 
         for (let i = 0; i < studentsToScrape.length; i++) {
             const studentName = studentsToScrape[i];
-            console.log(`\\n[${i + 1}/${studentsToScrape.length}] ${studentName}`);
+            console.log(`\\n[${i + 1}/${studentsToScrape.length}] Processing student`);
 
             try {
                 // Navigate to students tab
@@ -384,7 +384,7 @@ class MembeanScraper {
                     // Quick navigation back
                     await this.navigateBackToClass();
                 } else {
-                    console.log(`⏭️  Skipping ${studentName} - not found`);
+                    console.log(`⏭️  Skipping student - not found`);
                     this.allStudentData.push({
                         studentName: studentName,
                         error: 'not_found',
@@ -393,7 +393,7 @@ class MembeanScraper {
                 }
 
             } catch (error) {
-                console.log(`⚠️  Error with ${studentName}: ${error.message}`);
+                console.log(`⚠️  Error with student: ${error.message}`);
                 this.allStudentData.push({
                     studentName: studentName,
                     error: error.message,
@@ -524,9 +524,9 @@ if (require.main === module) {
                 console.log(`Total training sessions found: ${totalSessions}`);
                 
                 console.log('\\nStudent Training Summary:');
-                successfulStudents.forEach(student => {
+                successfulStudents.forEach((student, index) => {
                     const sessions = student.recentTraining?.length || 0;
-                    console.log(`- ${student.studentName}: ${sessions} sessions`);
+                    console.log(`- Student ${index + 1}: ${sessions} sessions`);
                 });
             }
             
@@ -536,9 +536,9 @@ if (require.main === module) {
             // List individual student screenshots
             if (data.studentsData) {
                 const successfulStudents = data.studentsData.filter(s => s.studentName);
-                successfulStudents.forEach(student => {
-                    const fileName = `student-${student.studentName.replace(/[^a-zA-Z0-9]/g, '_')}-screenshot.png`;
-                    console.log(`- ${fileName} (${student.studentName} screenshot)`);
+                successfulStudents.forEach((student, index) => {
+                    const fileName = `student-${index + 1}-screenshot.png`;
+                    console.log(`- ${fileName} (Student ${index + 1} screenshot)`);
                 });
             }
         })

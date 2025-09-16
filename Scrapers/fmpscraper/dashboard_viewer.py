@@ -141,8 +141,6 @@ class DashboardViewer:
                 
                 if current_visible:
                     print(f"   Found {len(current_visible)} new students in scroll {scroll_count + 1}")
-                    for student in current_visible:
-                        print(f"      📚 {student}")
                 
                 # Scroll down
                 self.driver.execute_script("window.scrollBy(0, 400);")
@@ -161,9 +159,9 @@ class DashboardViewer:
             print(f"📊 Total students found: {len(all_students)}")
             
             # Show all students
-            print(f"\n📋 All Students on Dashboard:")
+            print(f"\n📋 All Students on Dashboard: {len(all_students)} students")
             for i, student in enumerate(all_students, 1):
-                print(f"   {i:2d}. {student}")
+                print(f"   {i:2d}. Student {i}")
             
             # Compare with target students
             print(f"\n🎯 Checking your target students...")

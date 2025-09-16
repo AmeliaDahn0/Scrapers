@@ -65,7 +65,7 @@ async function uploadExistingData() {
     if (errorStudents.length > 0) {
       console.log(`⚠️  Students with errors (will be skipped): ${errorStudents.length}`);
       errorStudents.forEach(student => {
-        console.log(`   - ${student.email}: ${student.error}`);
+        console.log(`   - Student: ${student.error}`);
       });
     }
     
@@ -88,7 +88,7 @@ async function uploadExistingData() {
     if (uploadResults.errors && uploadResults.errors.length > 0) {
       console.log(`\n❌ Upload errors:`);
       uploadResults.errors.forEach(err => {
-        console.log(`   - ${err.email}: ${err.error}`);
+        console.log(`   - Student: ${err.error}`);
       });
     }
     

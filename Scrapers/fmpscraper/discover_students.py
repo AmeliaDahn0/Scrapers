@@ -108,7 +108,7 @@ def discover_students():
         
         sorted_students = sorted(list(all_students))
         for i, student in enumerate(sorted_students, 1):
-            print(f"   {i:2d}. {student}")
+            print(f"   {i:2d}. Student {i}")
         
         # Read target students
         print(f"\n🎯 Your Target Students:")
@@ -123,7 +123,7 @@ def discover_students():
                             target_students.append(name)
             
             for i, student in enumerate(target_students, 1):
-                print(f"   {i:2d}. {student}")
+                print(f"   {i:2d}. Target student {i}")
         except:
             print("   ❌ Could not read students.txt")
         

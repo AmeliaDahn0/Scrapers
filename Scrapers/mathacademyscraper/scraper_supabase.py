@@ -79,8 +79,8 @@ class MathAcademySupabaseScraper:
             
             print(f"Loaded {len(target_names)} target student names from {self.names_file}")
             print("Names converted to 'Last, First' format:")
-            for name in target_names:
-                print(f"  - {name}")
+        for i, name in enumerate(target_names, 1):
+            print(f"  - Target student {i}")
             
         except Exception as e:
             print(f"Error loading names file: {e}")
@@ -175,7 +175,7 @@ class MathAcademySupabaseScraper:
         """Get comprehensive detailed data by clicking on the student's link from the dashboard"""
         
         try:
-            print(f"  → Getting detailed data for {student_name} (ID: {student_id})")
+            print(f"  → Getting detailed data for student (ID: {student_id})")
             
             # First go back to the students page if we're not there
             current_url = page.url
@@ -607,7 +607,7 @@ class MathAcademySupabaseScraper:
                             'student_id': student_id,
                             'link': link
                         })
-                        print(f"✓ Found target student: {student_name} (ID: {student_id})")
+                        print(f"✓ Found target student (ID: {student_id})")
             except Exception as e:
                 continue
         
@@ -619,7 +619,7 @@ class MathAcademySupabaseScraper:
             student_id = student_info['student_id']
             
             try:
-                print(f"\n✓ Processing: {student_name}")
+                print(f"\n✓ Processing target student")
                 found_students.append(student_name)
                 
                 # Get basic data from main table first
@@ -664,7 +664,7 @@ class MathAcademySupabaseScraper:
                                             student_data['last_activity'] = parsed_date.isoformat()
                 
                 # NOW click into this specific student's page for detailed data
-                print(f"  → Clicking into {student_name}'s detailed page...")
+                print(f"  → Clicking into student's detailed page...")
                 detailed_data = await self.get_detailed_student_data(page, int(student_id), student_name)
                 student_data.update(detailed_data)
                 
@@ -707,7 +707,7 @@ class MathAcademySupabaseScraper:
                 students.append(student_data)
                 
             except Exception as e:
-                print(f"  ✗ Error processing student {student_name}: {e}")
+                print(f"  ✗ Error processing student: {e}")
                 continue
         
         print(f"\n=== RESULTS ===")
@@ -717,9 +717,7 @@ class MathAcademySupabaseScraper:
         print(f"Students skipped (not in target list): {len(student_links) - len(target_students)}")
         
         if found_students:
-            print(f"\nProcessed students:")
-            for name in found_students:
-                print(f"  ✓ {name}")
+            print(f"\nProcessed students: {len(found_students)} students")
         
         return students
 

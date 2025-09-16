@@ -40,8 +40,8 @@ class MathAcademySupabaseUpdater:
         
         if self.target_names:
             print("Names converted to 'Last, First' format:")
-            for name in list(self.target_names)[:10]:  # Show first 10
-                print(f"  - {name}")
+            for i, name in enumerate(list(self.target_names)[:10], 1):  # Show first 10
+                print(f"  - Target student {i}")
             if len(self.target_names) > 10:
                 print(f"  ... and {len(self.target_names) - 10} more")
 
@@ -455,7 +455,7 @@ class MathAcademySupabaseUpdater:
                     
                     # Check if this student is in our target list
                     if not self.target_names or student_name_lower in self.target_names:
-                        print(f"✓ Found target student: {student_name} (ID: {student_id})")
+                        print(f"✓ Found target student (ID: {student_id})")
                         target_students.append({
                             'id': student_id,
                             'name': student_name,

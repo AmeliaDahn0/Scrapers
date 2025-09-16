@@ -121,7 +121,7 @@ class StudentNamesFetcher:
                 for i, student in enumerate(students[:5], 1):
                     name = student.get('name', 'No name')
                     total_xp = student.get('total_xp', 0)
-                    print(f"  {i}. {name} (XP: {total_xp})")
+                    print(f"  {i}. Student {i} (XP: {total_xp})")
                 
                 if len(students) > 5:
                     print(f"  ... and {len(students) - 5} more students")

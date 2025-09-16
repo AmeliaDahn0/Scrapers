@@ -53,7 +53,7 @@ class TestSingleStudent:
                 student_id = "12616"
                 student_name = "Attia, Olivia"
                 
-                print(f"\n=== Testing data extraction for {student_name} ===")
+                print(f"\n=== Testing data extraction for test student ===")
                 
                 # Navigate to the activity page
                 activity_url = f"https://www.mathacademy.com/students/{student_id}/activity"

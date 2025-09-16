@@ -104,7 +104,7 @@ class SimpleStudentScraper:
                 for student in current_students:
                     if student not in all_students_found:
                         all_students_found.append(student)
-                        print(f"   📚 Found: {student}")
+                        print(f"   📚 Found student")
                 
                 # Scroll down
                 self.driver.execute_script("window.scrollBy(0, 300);")
@@ -127,7 +127,7 @@ class SimpleStudentScraper:
             
             # Show all found students
             for i, student in enumerate(all_students_found, 1):
-                print(f"   {i}. {student}")
+                print(f"   {i}. Student {i}")
             
             return all_students_found
             
@@ -163,7 +163,7 @@ class SimpleStudentScraper:
     def find_and_click_student(self, student_name):
         """Find and click on a specific student"""
         try:
-            print(f"\n🎯 Looking for: {student_name}")
+            print(f"\n🎯 Looking for student")
             
             # Scroll to top first
             self.driver.execute_script("window.scrollTo(0, 0);")
@@ -181,7 +181,7 @@ class SimpleStudentScraper:
                     try:
                         row_text = row.text.strip()
                         if student_name.lower() in row_text.lower():
-                            print(f"✅ Found {student_name}!")
+                            print(f"✅ Found target student!")
                             
                             # Scroll the row into view
                             self.driver.execute_script("arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});", row)
@@ -199,11 +199,11 @@ class SimpleStudentScraper:
                                     clickable = row
                             
                             # Click it
-                            print(f"🖱️  Clicking on {student_name}...")
+                            print(f"🖱️  Clicking on student...")
                             self.driver.execute_script("arguments[0].click();", clickable)
                             time.sleep(3)
                             
-                            print(f"✅ Successfully clicked {student_name}")
+                            print(f"✅ Successfully clicked student")
                             return True
                             
                     except Exception as e:
@@ -214,17 +214,17 @@ class SimpleStudentScraper:
                 time.sleep(0.5)
                 scroll_count += 1
             
-            print(f"❌ Could not find {student_name} after scrolling")
+            print(f"❌ Could not find student after scrolling")
             return False
             
         except Exception as e:
-            print(f"❌ Error finding {student_name}: {str(e)}")
+            print(f"❌ Error finding student: {str(e)}")
             return False
     
     def scrape_current_page(self, student_name):
         """Scrape data from current student page"""
         try:
-            print(f"📊 Scraping data for {student_name}...")
+            print(f"📊 Scraping data for student...")
             
             # Wait for page to load
             time.sleep(3)
@@ -250,7 +250,7 @@ class SimpleStudentScraper:
             return data
             
         except Exception as e:
-            print(f"❌ Error scraping {student_name}: {str(e)}")
+            print(f"❌ Error scraping student: {str(e)}")
             return {'student_name': student_name, 'status': 'failed', 'error': str(e)}
     
     def go_back(self):
@@ -287,7 +287,7 @@ class SimpleStudentScraper:
             
             print(f"🎯 Target students: {len(target_students)}")
             for i, student in enumerate(target_students, 1):
-                print(f"   {i}. {student}")
+                print(f"   {i}. Target student {i}")
             
             # Login and navigate
             if not self.login_and_navigate():
@@ -317,7 +317,7 @@ class SimpleStudentScraper:
             # Process each available target student
             for i, (target_name, found_name) in enumerate(available_targets, 1):
                 print(f"\n{'='*60}")
-                print(f"📚 Processing {i}/{len(available_targets)}: {target_name}")
+                print(f"📚 Processing student {i}/{len(available_targets)}")
                 print(f"{'='*60}")
                 
                 if self.find_and_click_student(found_name):

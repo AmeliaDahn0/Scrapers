@@ -88,11 +88,11 @@ def upload_student_data_to_supabase(supabase, student_organized_data):
             # Insert the record
             try:
                 result = supabase.table('fastmath_students').insert(record).execute()
-                print(f"   ✅ Uploaded: {student_name}")
+                print(f"   ✅ Uploaded student data")
                 uploaded_count += 1
                 
             except Exception as e:
-                print(f"   ❌ Failed to upload {student_name}: {e}")
+                print(f"   ❌ Failed to upload student data: {e}")
         
         print(f"📤 Upload complete: {uploaded_count}/{len(student_organized_data)} students uploaded successfully")
         return uploaded_count > 0
