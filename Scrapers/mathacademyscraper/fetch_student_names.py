@@ -109,7 +109,7 @@ class StudentNamesFetcher:
                             
                             # Optionally add metadata as comments
                             if i <= 5:  # Show details for first 5 students
-                                f.write(f"# ↳ XP: {total_xp}, Community: {community_number}, Email: {email}\n")
+                                f.write(f"# ↳ XP: [HIDDEN], Community: {community_number}, Email: [HIDDEN]\n")
                         else:
                             f.write(f"# Student {i}: (no name)\n")
             
@@ -121,7 +121,7 @@ class StudentNamesFetcher:
                 for i, student in enumerate(students[:5], 1):
                     name = student.get('name', 'No name')
                     total_xp = student.get('total_xp', 0)
-                    print(f"  {i}. Student {i} (XP: {total_xp})")
+                    print(f"  {i}. Student {i} (XP: [HIDDEN])")
                 
                 if len(students) > 5:
                     print(f"  ... and {len(students) - 5} more students")

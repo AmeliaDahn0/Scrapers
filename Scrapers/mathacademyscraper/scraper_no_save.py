@@ -455,7 +455,7 @@ class MathAcademySupabaseUpdater:
                     
                     # Check if this student is in our target list
                     if not self.target_names or student_name_lower in self.target_names:
-                        print(f"✓ Found target student (ID: {student_id})")
+                        print(f"✓ Found target student")
                         target_students.append({
                             'id': student_id,
                             'name': student_name,

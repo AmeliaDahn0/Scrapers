@@ -23,7 +23,7 @@ def test_mathacademy_privacy_console_outputs():
     print(f"✓ Fetched {len(scraped_students)} students from Supabase")
     print("\nSample students added:")
     for i, student in enumerate(scraped_students, 1):
-        print(f"  {i}. Student {i} (XP: {student['xp']})")
+        print(f"  {i}. Student {i} (XP: [HIDDEN])")
     
     print('\n📋 Testing target students loading:')
     print(f"Loaded {len(target_students)} target student names from student_names_to_scrape.txt")
@@ -36,14 +36,14 @@ def test_mathacademy_privacy_console_outputs():
     print(f"Found {len(target_students)} total student links")
     
     for i, student in enumerate(target_students, 1):
-        print(f"✓ Found target student (ID: {1000 + i})")
+        print(f"✓ Found target student")
     
     print(f"\n=== PROCESSING {len(target_students)} TARGET STUDENTS ===")
     
     # Process students (showing new format)
     for i, student in enumerate(target_students, 1):
         print(f"\n✓ Processing target student")
-        print(f"  → Getting detailed data for student (ID: {1000 + i})")
+        print(f"  → Getting detailed data for student")
         print(f"  → Clicking into student's detailed page...")
         
     print('\n📊 Testing filtered results:')
@@ -81,7 +81,7 @@ def test_mathacademy_privacy_console_outputs():
     
     for i, student in enumerate(scraped_students[:3], 1):
         print(f"  {i}. Student {i}")
-        print(f"     Course: {student['course']}, Progress: {student['progress']}, Weekly XP: {student['xp']}")
+        print(f"     Course: [HIDDEN], Progress: [HIDDEN], Weekly XP: [HIDDEN]")
     
     if len(scraped_students) > 3:
         print(f"     ... and {len(scraped_students) - 3} more students")

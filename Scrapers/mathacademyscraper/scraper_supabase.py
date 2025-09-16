@@ -607,7 +607,7 @@ class MathAcademySupabaseScraper:
                             'student_id': student_id,
                             'link': link
                         })
-                        print(f"✓ Found target student (ID: {student_id})")
+                        print(f"✓ Found target student")
             except Exception as e:
                 continue
         

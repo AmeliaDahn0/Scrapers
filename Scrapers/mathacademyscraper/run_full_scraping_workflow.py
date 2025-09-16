@@ -80,8 +80,8 @@ class FullScrapingWorkflow:
                     course = student.get('course_name', 'N/A')
                     progress = student.get('percent_complete', 'N/A')
                     weekly_xp = student.get('weekly_xp', 'N/A')
-                    print(f"  {i}. {name}")
-                    print(f"     Course: {course}, Progress: {progress}, Weekly XP: {weekly_xp}")
+                    print(f"  {i}. Student {i}")
+                    print(f"     Course: [HIDDEN], Progress: [HIDDEN], Weekly XP: [HIDDEN]")
                 
                 if len(scraped_students) > 3:
                     print(f"     ... and {len(scraped_students) - 3} more students")
