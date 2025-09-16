@@ -255,14 +255,14 @@ class MathAcademySupabaseUpdater:
             if weekly_xp_element:
                 weekly_xp_text = weekly_xp_element.get_text(strip=True)
                 detailed_data['weekly_xp'] = weekly_xp_text
-                print(f"    → Found weekly XP: {weekly_xp_text}")
+                print(f"    → Found weekly XP data")
             
             # 2. Daily XP from <td id="dailyGoalPoints">0/70 XP</td>
             daily_xp_element = soup.find('td', id='dailyGoalPoints')
             if daily_xp_element:
                 daily_xp_text = daily_xp_element.get_text(strip=True)
                 detailed_data['daily_xp'] = daily_xp_text
-                print(f"    → Found daily XP: {daily_xp_text}")
+                print(f"    → Found daily XP data")
             
             # 3. Course completion percentage from <div id="coursePercentComplete">29%</div>
             course_percent_element = soup.find('div', id='coursePercentComplete')

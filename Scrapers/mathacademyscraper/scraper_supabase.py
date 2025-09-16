@@ -175,7 +175,7 @@ class MathAcademySupabaseScraper:
         """Get comprehensive detailed data by clicking on the student's link from the dashboard"""
         
         try:
-            print(f"  → Getting detailed data for student (ID: {student_id})")
+            print(f"  → Getting detailed data for student")
             
             # First go back to the students page if we're not there
             current_url = page.url
@@ -225,14 +225,14 @@ class MathAcademySupabaseScraper:
             if weekly_xp_element:
                 weekly_xp_text = weekly_xp_element.get_text(strip=True)
                 detailed_data['weekly_xp'] = weekly_xp_text
-                print(f"    → Found weekly XP: {weekly_xp_text}")
+                print(f"    → Found weekly XP data")
             
             # 2. Daily XP from <td id="dailyGoalPoints">0/70 XP</td>
             daily_xp_element = soup.find('td', id='dailyGoalPoints')
             if daily_xp_element:
                 daily_xp_text = daily_xp_element.get_text(strip=True)
                 detailed_data['daily_xp'] = daily_xp_text
-                print(f"    → Found daily XP: {daily_xp_text}")
+                print(f"    → Found daily XP data")
             
             # 3. Estimated completion date from <div id="estimatedCompletion">
             estimated_completion_element = soup.find('div', id='estimatedCompletion')
@@ -242,12 +242,12 @@ class MathAcademySupabaseScraper:
                 if span_element:
                     estimated_date = span_element.get_text(strip=True)
                     detailed_data['estimated_completion'] = estimated_date
-                    print(f"    → Found estimated completion: {estimated_date}")
+                    print(f"    → Found estimated completion date")
                 else:
                     # Fallback: get all text and extract date
                     full_text = estimated_completion_element.get_text(strip=True)
                     detailed_data['estimated_completion'] = full_text
-                    print(f"    → Found estimated completion (full): {full_text}")
+                    print(f"    → Found estimated completion data")
             
             # 4. Extract detailed daily activity with dates from task table
             # First, get all date headers to create a date context map
@@ -446,26 +446,26 @@ class MathAcademySupabaseScraper:
                 if span_element:
                     estimated_date = span_element.get_text(strip=True)
                     detailed_data['estimated_completion'] = estimated_date
-                    print(f"    → Final estimated completion: {estimated_date}")
+                    print(f"    → Final estimated completion date collected")
                 else:
                     # Fallback: get all text and extract date
                     full_text = estimated_completion_element.get_text(strip=True)
                     detailed_data['estimated_completion'] = full_text
-                    print(f"    → Final estimated completion (full): {full_text}")
+                    print(f"    → Final estimated completion data collected")
             
             # Re-extract daily XP to prevent table overwriting
             daily_xp_element = soup.find('td', id='dailyGoalPoints')
             if daily_xp_element:
                 daily_xp_text = daily_xp_element.get_text(strip=True)
                 detailed_data['daily_xp'] = daily_xp_text
-                print(f"    → Final daily XP: {daily_xp_text}")
+                print(f"    → Final daily XP data collected")
             
             # Re-extract weekly XP to prevent table overwriting  
             weekly_xp_element = soup.find('div', id='thisWeekTotalXP')
             if weekly_xp_element:
                 weekly_xp_text = weekly_xp_element.get_text(strip=True)
                 detailed_data['weekly_xp'] = weekly_xp_text
-                print(f"    → Final weekly XP: {weekly_xp_text}")
+                print(f"    → Final weekly XP data collected")
             
             # Look for JavaScript data more comprehensively
             scripts = soup.find_all('script')

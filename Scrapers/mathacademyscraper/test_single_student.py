@@ -110,10 +110,10 @@ class TestSingleStudent:
                     span_element = estimated_completion_element.find('span')
                     if span_element:
                         estimated_date = span_element.get_text(strip=True)
-                        print(f"✓ Estimated completion: {estimated_date}")
+                        print(f"✓ Estimated completion date found")
                     else:
                         full_text = estimated_completion_element.get_text(strip=True)
-                        print(f"✓ Estimated completion (full): {full_text}")
+                        print(f"✓ Estimated completion data found")
                 else:
                     print("✗ Estimated completion element not found")
                 
