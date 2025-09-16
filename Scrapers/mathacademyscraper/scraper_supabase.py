@@ -79,8 +79,8 @@ class MathAcademySupabaseScraper:
             
             print(f"Loaded {len(target_names)} target student names from {self.names_file}")
             print("Names converted to 'Last, First' format:")
-        for i, name in enumerate(target_names, 1):
-            print(f"  - Target student {i}")
+            for i, name in enumerate(target_names, 1):
+                print(f"  - Target student {i}")
             
         except Exception as e:
             print(f"Error loading names file: {e}")
