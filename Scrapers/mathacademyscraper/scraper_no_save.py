@@ -255,14 +255,14 @@ class MathAcademySupabaseUpdater:
             if weekly_xp_element:
                 weekly_xp_text = weekly_xp_element.get_text(strip=True)
                 detailed_data['weekly_xp'] = weekly_xp_text
-                print(f"    → Found weekly XP data")
+                pass  # Found weekly XP data
             
             # 2. Daily XP from <td id="dailyGoalPoints">0/70 XP</td>
             daily_xp_element = soup.find('td', id='dailyGoalPoints')
             if daily_xp_element:
                 daily_xp_text = daily_xp_element.get_text(strip=True)
                 detailed_data['daily_xp'] = daily_xp_text
-                print(f"    → Found daily XP data")
+                pass  # Found daily XP data
             
             # 3. Course completion percentage from <div id="coursePercentComplete">29%</div>
             course_percent_element = soup.find('div', id='coursePercentComplete')
@@ -275,7 +275,7 @@ class MathAcademySupabaseUpdater:
             task_rows = soup.find_all('tr', id=re.compile(r'task-\d+'))
             
             if task_rows:
-                print(f"    → Found {len(task_rows)} task rows")
+                pass  # Found task rows
                 
                 daily_activities = []
                 for task_row in task_rows:
@@ -328,7 +328,7 @@ class MathAcademySupabaseUpdater:
                         continue
                 
                 detailed_data['daily_activity'] = daily_activities
-                print(f"    → Extracted {len(daily_activities)} task activities")
+                pass  # Extracted task activities
             
             # 5. Extract date-specific XP totals from dateHeader rows
             date_headers = soup.find_all('td', class_='dateHeader')

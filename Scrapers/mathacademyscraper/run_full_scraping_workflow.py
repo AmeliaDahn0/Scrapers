@@ -73,18 +73,7 @@ class FullScrapingWorkflow:
                     print(f"Students fetched from Supabase: {len(students)}")
                 print(f"Students successfully scraped: {len(scraped_students)}")
                 
-                # Show some sample data
-                print("\nSample scraped data:")
-                for i, student in enumerate(scraped_students[:3], 1):
-                    name = student.get('name', 'Unknown')
-                    course = student.get('course_name', 'N/A')
-                    progress = student.get('percent_complete', 'N/A')
-                    weekly_xp = student.get('weekly_xp', 'N/A')
-                    print(f"  {i}. Student {i}")
-                    print(f"     Course: [HIDDEN], Progress: [HIDDEN], Weekly XP: [HIDDEN]")
-                
-                if len(scraped_students) > 3:
-                    print(f"     ... and {len(scraped_students) - 3} more students")
+                pass  # Sample data scraped
                 
                 print(f"\n🎉 WORKFLOW COMPLETED SUCCESSFULLY!")
                 print(f"All data has been saved to Supabase math_academy_students table.")

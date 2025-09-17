@@ -78,9 +78,6 @@ class MathAcademySupabaseScraper:
                         target_names.append(converted_name)
             
             print(f"Loaded {len(target_names)} target student names from {self.names_file}")
-            print("Names converted to 'Last, First' format:")
-            for i, name in enumerate(target_names, 1):
-                print(f"  - Target student {i}")
                 
         except Exception as e:
             print(f"Error loading names file: {e}")
@@ -175,12 +172,12 @@ class MathAcademySupabaseScraper:
         """Get comprehensive detailed data by clicking on the student's link from the dashboard"""
         
         try:
-            print(f"  → Getting detailed data for student")
+            pass  # Getting detailed data
             
             # First go back to the students page if we're not there
             current_url = page.url
             if '/students' not in current_url or len(current_url.split('/')) > 4:
-                print(f"    → Navigating back to students dashboard")
+                pass  # Navigating back to dashboard
                 await page.goto("https://www.mathacademy.com/students")
                 await page.wait_for_load_state('networkidle', timeout=10000)
             
@@ -189,7 +186,7 @@ class MathAcademySupabaseScraper:
             student_link = await page.query_selector(student_link_selector)
             
             if student_link:
-                print(f"    → Clicking on student link")
+                pass  # Clicking on student link
                 await student_link.click()
                 await page.wait_for_load_state('networkidle', timeout=15000)
                 
@@ -225,14 +222,14 @@ class MathAcademySupabaseScraper:
             if weekly_xp_element:
                 weekly_xp_text = weekly_xp_element.get_text(strip=True)
                 detailed_data['weekly_xp'] = weekly_xp_text
-                print(f"    → Found weekly XP data")
+                pass  # Found weekly XP data
             
             # 2. Daily XP from <td id="dailyGoalPoints">0/70 XP</td>
             daily_xp_element = soup.find('td', id='dailyGoalPoints')
             if daily_xp_element:
                 daily_xp_text = daily_xp_element.get_text(strip=True)
                 detailed_data['daily_xp'] = daily_xp_text
-                print(f"    → Found daily XP data")
+                pass  # Found daily XP data
             
             # 3. Estimated completion date from <div id="estimatedCompletion">
             estimated_completion_element = soup.find('div', id='estimatedCompletion')
@@ -242,12 +239,12 @@ class MathAcademySupabaseScraper:
                 if span_element:
                     estimated_date = span_element.get_text(strip=True)
                     detailed_data['estimated_completion'] = estimated_date
-                    print(f"    → Found estimated completion date")
+                    pass  # Found estimated completion date
                 else:
                     # Fallback: get all text and extract date
                     full_text = estimated_completion_element.get_text(strip=True)
                     detailed_data['estimated_completion'] = full_text
-                    print(f"    → Found estimated completion data")
+                    pass  # Found estimated completion data
             
             # 4. Extract detailed daily activity with dates from task table
             # First, get all date headers to create a date context map
@@ -303,7 +300,7 @@ class MathAcademySupabaseScraper:
             daily_activities_by_date = {}
             
             if task_rows:
-                print(f"    → Found {len(task_rows)} task rows")
+                pass  # Found task rows
                 
                 for task_row in task_rows:
                     try:
@@ -395,7 +392,7 @@ class MathAcademySupabaseScraper:
                 
                 detailed_data['daily_activity'] = daily_activities_by_date
                 total_tasks = sum(len(date_data['activities']) for date_data in daily_activities_by_date.values())
-                print(f"    → Extracted {total_tasks} task activities across {len(daily_activities_by_date)} dates")
+                pass  # Extracted task activities
             
             # 5. Extract activity data from various page elements
             # Look for progress bars, charts, and activity summaries
@@ -446,26 +443,26 @@ class MathAcademySupabaseScraper:
                 if span_element:
                     estimated_date = span_element.get_text(strip=True)
                     detailed_data['estimated_completion'] = estimated_date
-                    print(f"    → Final estimated completion date collected")
+                    pass  # Final estimated completion collected
                 else:
                     # Fallback: get all text and extract date
                     full_text = estimated_completion_element.get_text(strip=True)
                     detailed_data['estimated_completion'] = full_text
-                    print(f"    → Final estimated completion data collected")
+                    pass  # Final estimated completion collected
             
             # Re-extract daily XP to prevent table overwriting
             daily_xp_element = soup.find('td', id='dailyGoalPoints')
             if daily_xp_element:
                 daily_xp_text = daily_xp_element.get_text(strip=True)
                 detailed_data['daily_xp'] = daily_xp_text
-                print(f"    → Final daily XP data collected")
+                pass  # Final daily XP collected
             
             # Re-extract weekly XP to prevent table overwriting  
             weekly_xp_element = soup.find('div', id='thisWeekTotalXP')
             if weekly_xp_element:
                 weekly_xp_text = weekly_xp_element.get_text(strip=True)
                 detailed_data['weekly_xp'] = weekly_xp_text
-                print(f"    → Final weekly XP data collected")
+                pass  # Final weekly XP collected
             
             # Look for JavaScript data more comprehensively
             scripts = soup.find_all('script')
@@ -517,7 +514,7 @@ class MathAcademySupabaseScraper:
             # Save raw page content for debugging (first 1000 chars) - only in local backup, not Supabase
             # detailed_data['page_sample'] = page_text[:1000] if page_text else ""
             
-            print(f"    ✓ Extracted {len(detailed_data['daily_activity'])} activity items and {len(detailed_data['tasks'])} task items")
+            print(f"    ✓ Data extracted")
             
             return detailed_data
             
@@ -664,7 +661,7 @@ class MathAcademySupabaseScraper:
                                             student_data['last_activity'] = parsed_date.isoformat()
                 
                 # NOW click into this specific student's page for detailed data
-                print(f"  → Clicking into student's detailed page...")
+                pass  # Clicking into detailed page
                 detailed_data = await self.get_detailed_student_data(page, int(student_id), student_name)
                 student_data.update(detailed_data)
                 

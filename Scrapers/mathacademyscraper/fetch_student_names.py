@@ -117,14 +117,7 @@ class StudentNamesFetcher:
             
             # Show summary
             if students:
-                print(f"\nSample students added:")
-                for i, student in enumerate(students[:5], 1):
-                    name = student.get('name', 'No name')
-                    total_xp = student.get('total_xp', 0)
-                    print(f"  {i}. Student {i} (XP: [HIDDEN])")
-                
-                if len(students) > 5:
-                    print(f"  ... and {len(students) - 5} more students")
+                pass  # Students added to file
             
             return True
             
