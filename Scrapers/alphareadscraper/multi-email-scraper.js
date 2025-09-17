@@ -622,8 +622,8 @@ async function scrapeMultipleStudents() {
   const isCI = process.env.CI === 'true';
   
   console.log(`🔧 Environment: ${isCI ? 'GitHub Actions CI' : 'Local'}`);
-  console.log(`📧 Login email: ${loginEmail ? loginEmail.substring(0, 3) + '***@' + loginEmail.split('@')[1] : 'NOT SET'}`);
-  console.log(`🔑 Password: ${loginPassword ? '***' + loginPassword.slice(-2) : 'NOT SET'}`);
+  console.log(`📧 Login email: [HIDDEN]`);
+  console.log(`🔑 Password: [HIDDEN]`);
   
   if (!loginEmail || !loginPassword || loginEmail === 'your.email@example.com') {
     console.log('❌ Please configure your login credentials in environment variables');
@@ -861,11 +861,11 @@ async function scrapeMultipleStudents() {
                 
                 // Check if URL updated with search parameter
                 const currentUrl = page.url();
-                console.log(`🔍 Search URL: ${currentUrl}`);
+                // Hidden: Search URL
                 
                 // Debug: Check if search input still has the value
                 const searchValue = await searchInput.inputValue();
-                console.log(`🔍 Search input value: "${searchValue}"`);
+                // Hidden: Search input value
                 
                 // Look for the student in search results
                 const studentFound = await page.evaluate((email) => {
@@ -923,15 +923,7 @@ async function scrapeMultipleStudents() {
                 };
               }, targetEmail.email);
               
-              // Debug logging
-              console.log(`📊 Search results for student:`);
-              console.log(`  - Email found in page: ${studentFound.debug.hasEmailInPage}`);
-              console.log(`  - Details buttons visible: ${studentFound.debug.detailsButtonCount}`);
-              console.log(`  - Table rows: ${studentFound.debug.tableRowCount}`);
-              console.log(`  - First table row: ${studentFound.debug.firstTableRow}`);
-              if (!studentFound.found) {
-                console.log(`  - Page text sample: ${studentFound.debug.pageTextSample}`);
-              }
+              // Hidden: Search results details
               
               if (studentFound.found) {
                 console.log(`✅ Found target student`);
@@ -973,7 +965,7 @@ async function scrapeMultipleStudents() {
                   studentsProcessed++;
                   
                   console.log(`📋 Successfully scraped data for student`);
-                  console.log(`📊 Progress: ${studentsProcessed} students processed so far`);
+                  // Hidden: Progress counter
                   
                 } catch (scrapingError) {
                   console.log(`❌ Error scraping student:`, scrapingError.message);

@@ -114,17 +114,16 @@ async function uploadAllData() {
         continue;
       }
 
-      console.log(`🔄 Uploading ${student.email}...`);
+      console.log(`🔄 Uploading student...`);
       const result = await uploadToSupabase(student);
       
       if (result.success) {
-        console.log(`✅ Successfully uploaded ${student.email}`);
+        console.log(`✅ Successfully uploaded student`);
         results.successful++;
       } else {
-        console.log(`❌ Failed to upload ${student.email}:`, result.error);
+        console.log(`❌ Failed to upload student:`, result.error);
         results.failed++;
         results.errors.push({
-          email: student.email,
           error: result.error
         });
       }
